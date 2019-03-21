@@ -1,7 +1,7 @@
-SERVER_FILE=$(shell find ./server/ -name '*.java')
+SERVER_FILE=./server/*.java
 SERVER_BIN=./bin/server/
 SERVER_CLASS_FILE=$(SERVER_BIN)*.class
-CLIENT_FILE=$(shell find ./client/ -name '*.java')
+CLIENT_FILE=./client/*.java
 CLIENT_BIN=./bin/client/
 CLIENT_CLASS_FILE=$(CLIENT_BIN)*.class
 
