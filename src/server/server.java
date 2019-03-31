@@ -2,13 +2,11 @@ package src.server;
 
 class Server
 {
-    Test test;
     public static void main(String[] args) {
-        System.out.println("ola23");
-
-        
-
-
+        if(args[0].equals("error") || args.length==0)
+        {
+            System.out.println("No arguments provided. Use make Server arguments=\"<arguments>\"");
+        }
 
     }
 }
