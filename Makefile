@@ -11,6 +11,7 @@ server: $(SERVER_CLASS_FILE)
 	java -classpath $(SERVER_BIN) Server $(arguments)
 
 $(SERVER_CLASS_FILE): $(SERVER_FILE)
+	rm -f $(SERVER_CLASS_FILE)
 	javac -d $(SERVER_BIN) -cp $(SERVER_BIN) -s ./src/server $(SERVER_FILE)
 
 
@@ -18,6 +19,7 @@ client: $(CLIENT_CLASS_FILE)
 	java -classpath $(CLIENT_BIN) Client $(arguments)
 
 $(CLIENT_CLASS_FILE): $(CLIENT_FILE)
+	rm -f $(CLIENT_CLASS_FILE)
 	javac -d $(CLIENT_BIN) -cp $(CLIENT_BIN) -s ./src/client $(CLIENT_FILE)
 
 clean:

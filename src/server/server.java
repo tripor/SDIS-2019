@@ -8,12 +8,12 @@ class Server
         }
         Server server= new Server(args[0],Integer.parseInt(args[1]));
     }
-
-    private int port;
-    private String address;
+    private Udp main_channel;
 
     public Server(String address,int port)
     {
-
+        main_channel = new Udp(address,port);
     }
+
+    
 }
