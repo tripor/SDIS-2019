@@ -6,7 +6,6 @@ CLIENT_BIN=./bin/client/
 CLIENT_CLASS_FILE=$(CLIENT_BIN)*.class
 arguments=error
 
-
 server: $(SERVER_CLASS_FILE)
 	java -classpath $(SERVER_BIN) Server $(arguments)
 
