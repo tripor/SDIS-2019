@@ -12,6 +12,9 @@ server: $(SERVER_CLASS_FILE)
 
 $(SERVER_CLASS_FILE): $(SERVER_FILE)
 	rm -f $(SERVER_CLASS_FILE)
+	if [ ! -d "$(SERVER_BIN)" ]; then \
+		mkdir $(SERVER_BIN); \
+	fi
 	javac -d $(SERVER_BIN) -cp $(SERVER_BIN) -s ./src/server $(SERVER_FILE)
 
 
@@ -20,6 +23,9 @@ client: $(CLIENT_CLASS_FILE)
 
 $(CLIENT_CLASS_FILE): $(CLIENT_FILE)
 	rm -f $(CLIENT_CLASS_FILE)
+	if [ ! -d "$(CLIENT_BIN)" ]; then \
+		mkdir $(CLIENT_BIN); \
+	fi
 	javac -d $(CLIENT_BIN) -cp $(CLIENT_BIN) -s ./src/client $(CLIENT_FILE)
 
 clean:
