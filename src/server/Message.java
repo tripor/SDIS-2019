@@ -69,6 +69,11 @@ public class Message {
         }
         return devolver;
     }
+
+    public String getFileId()
+    {
+        return this.FileId;
+    }
     /**
      * https://www.geeksforgeeks.org/sha-256-hash-in-java/
      */
