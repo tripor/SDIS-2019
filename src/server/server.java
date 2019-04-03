@@ -190,7 +190,66 @@ public class Server {
         } catch (IOException ex) {
             System.out.println("Error while reading file '" + path + "'");
         }
-        if (body_completo.length() / 64000 != 0) {
+        int divisoes = body_completo.length() / 64000;
+        if (divisoes != 0) {
+            if (body_completo.length() % 64000 != 0)
+                divisoes++;
+            int inicio, fim;
+            inicio = 0;
+            fim = 63999;
+            for (int j = 1; j <= divisoes; j++) {
+                System.out.println("Sending chunk number " +j);
+                String chunk_no_j=Integer.toString(j);
+                String mandar=body_completo.substring(inicio, fim);
+                inicio+=64000;
+                fim+=64000;
+                if(fim>body_completo.length())fim=body_completo.length();
+
+                Message mensagem = null;
+                try {
+                    mensagem = new Message(new String[] { "PUTCHUNK", version, Integer.toString(this.server_number),
+                            path, chunk_no_j,Integer.toString(rep_deg) });
+                    mensagem.hashFileId();
+                } catch (Exception e) {
+                    System.out.println("Message format wrong");
+                    return;
+                }
+                ArrayList<String> nada = new ArrayList<String>();
+                if (this.confirmation.containsKey(mensagem.getFileId())) {
+                    if (this.confirmation.get(mensagem.getFileId()).containsKey(version)) {
+                        this.confirmation.get(mensagem.getFileId()).get(version).put(chunk_no_j, nada);
+                    } else {
+                        HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
+                        chunk_no_hash.put(chunk_no_j, nada);
+                        this.confirmation.get(mensagem.getFileId()).put(version, chunk_no_hash);
+                    }
+                } else {
+                    HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
+                    chunk_no_hash.put(chunk_no_j, nada);
+                    HashMap<String, HashMap<String, ArrayList<String>>> version_hash = new HashMap<String, HashMap<String, ArrayList<String>>>();
+                    version_hash.put(version, chunk_no_hash);
+                    this.confirmation.put(mensagem.getFileId(), version_hash);
+                }
+                int i = 0;
+                while (this.confirmation.get(mensagem.getFileId()).get(version).get(chunk_no_j).size() < rep_deg) {
+                    if (i != 0 && i != 6)
+                        System.out.println("Peers didn't respond on time. Retrying...");
+                    i++;
+                    if (i == 6) {
+                        System.out.println("Message couldn't be saved on servers");
+                        return;
+                    }
+                    System.out.println("Trying to save file.");
+                    this.MDBsendMessage(mensagem, mandar);
+                    try {
+                        Thread.sleep(i * 1000);
+
+                    } catch (InterruptedException e) {
+                        System.out.println("Thread was interrupted.");
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
 
         } else {
             Message mensagem = null;
@@ -212,6 +271,7 @@ public class Server {
                     this.confirmation.get(mensagem.getFileId()).put(version, chunk_no_hash);
                 }
             } else {
+                System.out.println(mensagem.getFileId());
                 HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
                 chunk_no_hash.put("1", nada);
                 HashMap<String, HashMap<String, ArrayList<String>>> version_hash = new HashMap<String, HashMap<String, ArrayList<String>>>();
@@ -220,7 +280,7 @@ public class Server {
             }
             int i = 0;
             while (this.confirmation.get(mensagem.getFileId()).get(version).get("1").size() < rep_deg) {
-                if (i != 0 && i!=6)
+                if (i != 0 && i != 6)
                     System.out.println("Peers didn't respond on time. Retrying...");
                 i++;
                 if (i == 6) {
@@ -261,7 +321,7 @@ public class Server {
             directory.mkdirs();
         File save_file = new File(file_path);
         ArrayList<String> inserir = new ArrayList<String>();
-        inserir.add(sender_id);
+        inserir.add(Integer.toString(this.server_number));
         if (!save_file.exists()) {
             try {
                 save_file.createNewFile();
@@ -331,21 +391,24 @@ public class Server {
 
     public void MCmessageReceived() {
         System.out.println("Received a multicast control channel message");
-        String[] mensagem = this.MDB.getMessage();
+        String[] mensagem = this.MC.getMessage();
 
         if (mensagem[0].equals("STORED")) {
             String version = mensagem[1];
             String sender_id = mensagem[2];
             String file_id = mensagem[3];
-            int chunk_no = Integer.parseInt(mensagem[4]);
+            String chunk_no = mensagem[4];
+            System.out.println(chunk_no);
             if (this.confirmation.containsKey(file_id)) {
-                this.confirmation.get(file_id).get(version).get(chunk_no).add(sender_id);
+                if (!this.confirmation.get(file_id).get(version).get(chunk_no).contains(sender_id))
+                    this.confirmation.get(file_id).get(version).get(chunk_no).add(sender_id);
             } else if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(version)
                     && this.info.get(file_id).get(version).containsKey(chunk_no)) {
                 if (!this.info.get(file_id).get(version).get(chunk_no).contains(sender_id))
                     this.info.get(file_id).get(version).get(chunk_no).add(sender_id);
             }
         }
+        this.saveInfo();
     }
 
     public void MDRmessageReceived() {
