@@ -643,6 +643,20 @@ public class Server {
         return true;
 
     }
+    
+    public Boolean sendRemovedMessage(String version,String file_id,String chunk_no)
+    {
+        try {
+            Message mandar = new Message( new String[]{ "REMOVED", version, Integer.toString(this.server_number), file_id ,chunk_no});
+            this.MCsendMessage(mandar);
+        } catch (Exception e) {
+            System.out.println("Couldn't send the DELETE message. Skipping...");
+            return false;
+        }
+        this.saveFileInfo();
+        return true;
+
+    }
 
     /**
      * Mandar um packet para o canal MC
@@ -741,13 +755,30 @@ public class Server {
                     }
                     dir.delete();
                 }
-                for(String chunks:this.info.get(file_id).get(version).keySet())
-                {
-                    this.info.get(file_id).get(version).get(chunks).remove(Integer.toString(this.server_number));
-                }
+                
             }
             this.saveInfo();
-
+        }
+        else if (mensagem[0].equals("REMOVED"))
+        {
+            String version = mensagem[1];
+            String sender_id = mensagem[2];
+            String file_id = mensagem[3];
+            String chunk_no = mensagem[4];
+            if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(version) && this.info.get(file_id).get(version).containsKey(chunk_no))
+            {
+                for(String chunks:this.info.get(file_id).get(version).keySet())
+                {
+                    Random rand = new Random();
+                    int n = rand.nextInt(401);
+                    Thread.sleep(n);
+                    this.sendRemovedMessage(version, file_id, chunks);
+                }
+                this.files_info.get(file_id).remove(version);
+            }
+            
+            
+            this.saveInfo();
         }
     }
 
