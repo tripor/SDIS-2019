@@ -125,7 +125,7 @@ public class Message {
             // Convert message digest into hex value 
             String hashtext = no.toString(16); 
   
-            while (hashtext.length() < 32) { 
+            while (hashtext.length() < 64) { 
                 hashtext = "0" + hashtext; 
             } 
   

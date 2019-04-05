@@ -14,7 +14,7 @@ public interface ClientInterface extends Remote {
 * Class where the client interface will be implemented
 * DBS-distributed backup service
 */
-public class DBS implements ClientInterface {
+/*public class DBS implements ClientInterface {
     public DBS() {}
 
     public String request(String opr) {
@@ -22,4 +22,4 @@ public class DBS implements ClientInterface {
         System.out.println("Server processing message: " + opr + "...");
     }
 
-}
+}*/
