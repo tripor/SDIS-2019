@@ -12,6 +12,10 @@ public class Server {
     private Udp MDB;
     private Udp MC;
     private Udp MDR;
+
+    private int max_number_of_chunks=100;
+    private int number_of_chunks=0;
+
     // Fileid Version chunkNo rep degree
     private HashMap<String, HashMap<String, HashMap<String, ArrayList<String>>>> info = new HashMap<String, HashMap<String, HashMap<String, ArrayList<String>>>>();
     private HashMap<String, HashMap<String, Integer>> files_info = new HashMap<String, HashMap<String, Integer>>();
@@ -231,6 +235,7 @@ public class Server {
                             ArrayList<String> senders = new ArrayList<String>();
                             for (int t = 0; t < rep; t++) {
                                 String senderID = bufferedReader.readLine();
+                                if(senderID.equals(Integer.toString(server_number)))this.number_of_chunks++;
                                 senders.add(senderID);
                             }
                             chunk_no_hash.put(chunk_no_st, senders);
@@ -523,6 +528,8 @@ public class Server {
             this.info.get(file_id).get(version).put(chunk_no, inserir);
         }
         this.saveInfo();
+        this.number_of_chunks++;
+        if(this.number_of_chunks>this.max_number_of_chunks)this.tooMuchChunks();
         try {
             Random rand = new Random();
             int n = rand.nextInt(401);
@@ -755,6 +762,21 @@ public class Server {
                     }
                     dir.delete();
                 }
+                for(String chunks:this.info.get(file_id).get(version).keySet())
+                {
+                    try {
+                        Random rand = new Random();
+                        int n = rand.nextInt(401);
+                        Thread.sleep(n);
+                        this.sendRemovedMessage(version, file_id, chunks);
+            
+                    } catch (InterruptedException e) {
+                        System.out.println("Thread was interrupted.");
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+                this.info.get(file_id).remove(version);
                 
             }
             this.saveInfo();
@@ -767,17 +789,9 @@ public class Server {
             String chunk_no = mensagem[4];
             if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(version) && this.info.get(file_id).get(version).containsKey(chunk_no))
             {
-                for(String chunks:this.info.get(file_id).get(version).keySet())
-                {
-                    Random rand = new Random();
-                    int n = rand.nextInt(401);
-                    Thread.sleep(n);
-                    this.sendRemovedMessage(version, file_id, chunks);
-                }
-                this.files_info.get(file_id).remove(version);
+                this.info.get(file_id).get(version).get(chunk_no).remove(sender_id);
             }
-            
-            
+            //TODO verificar se o count de replicação esta direito, valor dentro do ficheiro. Se não mandar putchunk do body
             this.saveInfo();
         }
     }
@@ -817,5 +831,11 @@ public class Server {
 
     public int getServerNumber() {
         return this.server_number;
+    }
+
+
+    public void tooMuchChunks()
+    {
+        //TODO Passou o limite de espaço do servidor. Medido em quantidade de chunks maximo que pode guardar. Cada chunk tem no maximo 64K. Ele conta sempre 64K é por isso que só estou a contar o numero de chunks
     }
 }
