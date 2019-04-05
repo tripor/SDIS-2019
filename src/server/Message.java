@@ -13,7 +13,7 @@ public class Message {
     private String ReplicationDeg;
 
     public Message(String[] message) throws Erros {
-        if (message.length <= 4) {
+        if (message.length < 4) {
             System.out.println("A message must have at least 3 fields");
             throw new Erros();
         }

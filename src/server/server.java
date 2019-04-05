@@ -47,7 +47,8 @@ public class Server {
 
         try {
             if (this.server_number == 1) {
-                System.out.println(sendGetChunkMessage("1.1", "./files/client/t.txt"));
+                this.sendDeletemessage("1.1", "./files/client/t.txt");
+                //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
             } else {
                 // this.MDB.receive();
             }
@@ -540,7 +541,7 @@ public class Server {
     public Boolean sendStoredMessage(String version, String sender_id, String file_id, String chunk_no) {
         try {
             Message mandar = new Message(
-                    new String[] { "STORED", version, Integer.toString(this.server_number), file_id, chunk_no });
+                    new String[]{ "STORED", version, Integer.toString(this.server_number), file_id, chunk_no });
             this.MCsendMessage(mandar);
         } catch (Exception e) {
             System.out.println("Couldn't send the STORED message. Skipping...");
@@ -616,6 +617,30 @@ public class Server {
             return null;
         }
         return devolver;
+
+    }
+
+    public Boolean sendDeletemessage(String version,String file_id)
+    {
+        if(this.files_info.containsKey(file_id) && this.files_info.get(file_id).containsKey(version))
+        {
+            this.files_info.get(file_id).remove(version);
+        }
+        else
+        {
+            System.out.println("Couldn't send the DELETE message. File doesn't exist. Skipping...");
+            return false;
+        }
+        try {
+            Message mandar = new Message( new String[]{ "DELETE", version, Integer.toString(this.server_number), file_id});
+            mandar.hashFileId();
+            this.MCsendMessage(mandar);
+        } catch (Exception e) {
+            System.out.println("Couldn't send the DELETE message. Skipping...");
+            return false;
+        }
+        this.saveFileInfo();
+        return true;
 
     }
 
@@ -697,6 +722,31 @@ public class Server {
                 }
                 
             }
+
+        }
+        else if (mensagem[0].equals("DELETE"))
+        {
+            String version = mensagem[1];
+            String sender_id = mensagem[2];
+            String file_id = mensagem[3];
+            if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(version))
+            {
+                String path="./files/server/"+this.server_number+"/save/"+file_id+"/"+version;
+                File dir= new File(path);
+                if(dir.exists())
+                {
+                    for(File chunks:dir.listFiles())
+                    {
+                        chunks.delete();
+                    }
+                    dir.delete();
+                }
+                for(String chunks:this.info.get(file_id).get(version).keySet())
+                {
+                    this.info.get(file_id).get(version).get(chunks).remove(Integer.toString(this.server_number));
+                }
+            }
+            this.saveInfo();
 
         }
     }
