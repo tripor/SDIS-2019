@@ -54,7 +54,7 @@ public class Server {
         File directory = new File(path);
         if (!directory.exists())
             directory.mkdirs();
-
+        /*
         try {
             DBS obj = new DBS(this);
             ClientInterface stub = (ClientInterface) UnicastRemoteObject.exportObject(obj, 0);
@@ -68,12 +68,13 @@ public class Server {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
         }
+        */
         
-        /*
         try {
             if (this.server_number == 1) {
-                //this.sendDeletemessage("1.1", "./files/client/t.txt");
-                this.sendPutChunkMessage("1.1", "./files/client/t.txt", 2);
+                //this.sendDeletemessage("1.1", "./files/client/cell.jpg");
+                //this.sendPutChunkMessage("1.1", "./files/client/cell.jpg", 1);
+                this.saveFile("./files/client/cell.jpg", this.sendGetChunkMessage("1.2", "./files/client/cell.jpg"));
             } else {
                 // this.MDB.receive();
             }
@@ -81,7 +82,7 @@ public class Server {
         } catch (Exception e) {
             System.out.println("Message format wrong");
             System.exit(3);
-        }*/
+        }
 
     }
 
@@ -332,23 +333,11 @@ public class Server {
      * @param rep_deg Degree de replicação que eu quero se seja atingido
      */
     public void sendPutChunkMessage(String version, String path, int rep_deg) {
-        String body_completo = "";
-        try {
-            String line;
-            FileReader fileReader = new FileReader(path);
-            BufferedReader bufferedReader = new BufferedReader(fileReader);
-            while ((line = bufferedReader.readLine()) != null) {
-                body_completo += line;
-            }
-            bufferedReader.close();
-        } catch (FileNotFoundException ex) {
-            System.out.println("Unable to open file '" + path + "'");
-        } catch (IOException ex) {
-            System.out.println("Error while reading file '" + path + "'");
-        }
-        int divisoes = body_completo.length() / 64000;
+        byte[] body_completo = this.readAnyFile(path);
+        if(body_completo==null)return;
+        int divisoes = body_completo.length / 64000;
         if (divisoes != 0) {
-            if (body_completo.length() % 64000 != 0)
+            if (body_completo.length % 64000 != 0)
                 divisoes++;
             int inicio, fim;
             inicio = 0;
@@ -356,11 +345,12 @@ public class Server {
             for (int j = 0; j < divisoes; j++) {
                 System.out.println("Sending chunk number " + j);
                 String chunk_no_j = Integer.toString(j);
-                String mandar = body_completo.substring(inicio, fim);
                 inicio += 64000;
                 fim += 64000;
-                if (fim > body_completo.length())
-                    fim = body_completo.length();
+                if (fim > body_completo.length)
+                    fim = body_completo.length;
+                byte[] mandar= new byte[inicio-fim];
+                System.arraycopy(body_completo, inicio, mandar, 0, inicio-fim);
 
                 Message mensagem = null;
                 try {
@@ -429,7 +419,6 @@ public class Server {
                     this.confirmation.get(mensagem.getFileId()).put(version, chunk_no_hash);
                 }
             } else {
-                System.out.println(mensagem.getFileId());
                 HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
                 chunk_no_hash.put("0", nada);
                 HashMap<String, HashMap<String, ArrayList<String>>> version_hash = new HashMap<String, HashMap<String, ArrayList<String>>>();
@@ -476,7 +465,7 @@ public class Server {
      * @param body    Body do chunk que quero enviar
      * @return True se foi possivel mandar a mensagem ou false caso contrario
      */
-    public Boolean MDBsendMessage(Message message, String body) {
+    public Boolean MDBsendMessage(Message message, byte[] body) {
         try {
             System.out.println("Sending message to MDB.");
             this.MDB.sendMessageBody(message.getMessage(), body);
@@ -494,7 +483,7 @@ public class Server {
     public void MDBmessageReceived() {
         System.out.println("Received a multicast data channel message");
         String[] mensagem = this.MDB.getMessage();
-        String body = this.MDB.getBody().trim();
+        byte[] body = this.MDB.getBody();
         String version = mensagem[1];
         String sender_id = mensagem[2];
         String file_id = mensagem[3];
@@ -516,14 +505,9 @@ public class Server {
                 return;
             }
             try {
-                BufferedWriter bw = new BufferedWriter(new FileWriter(file_path));
-                bw.write(mensagem[1] + "\n");
-                bw.write(mensagem[2] + "\n");
-                bw.write(mensagem[3] + "\n");
-                bw.write(mensagem[4] + "\n");
-                bw.write(mensagem[5] + "\n");
-                bw.write(body);
-                bw.close();
+                FileOutputStream fos = new FileOutputStream(file_path);
+                fos.write(body);
+                fos.close();
 
             } catch (IOException e) {
                 System.out.println("Couldn\'t write to file. Skipping...");
@@ -567,7 +551,7 @@ public class Server {
 
     }
 
-    private HashMap<String,HashMap<String,HashMap<String,String>>> chunk_body_string = new HashMap<String,HashMap<String,HashMap<String,String>>>();
+    private HashMap<String,HashMap<String,HashMap<String,byte[]>>> chunk_body_string = new HashMap<String,HashMap<String,HashMap<String,byte[]>>>();
 
     public Boolean sendStoredMessage(String version, String sender_id, String file_id, String chunk_no) {
         try {
@@ -581,8 +565,43 @@ public class Server {
         return true;
     }
 
+
+    public void saveFile(String path,byte[] body)
+    {
+        File file= new File(path);
+        String name = file.getName();
+
+        String path_save="./files/client/save/";
+        File directory = new File(path_save);
+        if (!directory.exists())
+            directory.mkdirs();
+        File save_file = new File(path_save+name);
+        if (!save_file.exists()) {
+            try {
+                save_file.createNewFile();
+
+            } catch (IOException e) {
+                System.out.println("Couldn't create file to write. Skipping...");
+                this.usingFileInfo = false;
+                notifyAll();
+                return;
+            }
+        }
+        try {
+            FileOutputStream fos = new FileOutputStream(path_save+name);
+            fos.write(body);
+            fos.close();
+
+        } catch (IOException e) {
+            System.out.println("Couldn\'t write to file. Skipping...");
+            save_file.delete();
+            return;
+        }
+
+    }
+
     //TODO que vai fazer com a informaçao do restore? Provavelmente criar um ficheiro com essa info 
-    public String sendGetChunkMessage(String version, String file_id) {
+    public byte[] sendGetChunkMessage(String version, String file_id) {
         int number_of_chunks;
         if (this.files_info.containsKey(file_id) && this.files_info.get(file_id).containsKey(version)) {
             number_of_chunks = this.files_info.get(file_id).get(version).intValue();
@@ -591,7 +610,8 @@ public class Server {
             return null;
         }
         file_id = Message.getSHA(file_id);
-        String devolver="";
+        byte[] devolver= new byte[64500];
+        int pos_atual=0;
         try {
             if (this.chunk_body_string.containsKey(file_id) && this.chunk_body_string.get(file_id).containsKey(version)) {
                 System.out.println("Someone is trying to get this file. Please try later.");
@@ -604,20 +624,20 @@ public class Server {
                 {
                     if(this.chunk_body_string.get(file_id).containsKey(version))
                     {
-                        this.chunk_body_string.get(file_id).get(version).put(Integer.toString(i), "");
+                        this.chunk_body_string.get(file_id).get(version).put(Integer.toString(i), null);
                     }
                     else
                     {
-                        HashMap<String,String> version_hash = new HashMap<String,String>();
-                        version_hash.put(Integer.toString(i), "");
+                        HashMap<String,byte[]> version_hash = new HashMap<String,byte[]>();
+                        version_hash.put(Integer.toString(i), null);
                         this.chunk_body_string.get(file_id).put(version, version_hash);
                     }
                 }
                 else
                 {
-                    HashMap<String,HashMap<String,String>> file_hash = new HashMap<String,HashMap<String,String>>();
-                    HashMap<String,String> version_hash = new HashMap<String,String>();
-                    version_hash.put(Integer.toString(i), "");
+                    HashMap<String,HashMap<String,byte[]>> file_hash = new HashMap<String,HashMap<String,byte[]>>();
+                    HashMap<String,byte[]> version_hash = new HashMap<String,byte[]>();
+                    version_hash.put(Integer.toString(i), null);
                     file_hash.put(version, version_hash);
                     this.chunk_body_string.put(file_id, file_hash);
                 }
@@ -627,7 +647,7 @@ public class Server {
                 int espera = 1;
                 while (true) {
                     Thread.sleep(espera * 1000);
-                    if (this.chunk_body_string.get(file_id).get(version).get(Integer.toString(i)) == "") {
+                    if (this.chunk_body_string.get(file_id).get(version).get(Integer.toString(i)) == null) {
                         System.out.println("Resending the GETCHUNK message");
                         this.MCsendMessage(mandar);
                     }
@@ -641,7 +661,8 @@ public class Server {
                         return null;
                     }
                 }
-                devolver+=this.chunk_body_string.get(file_id).get(version).get(Integer.toString(i));
+                System.arraycopy(this.chunk_body_string.get(file_id).get(version).get(Integer.toString(i)), 0, devolver, pos_atual, this.chunk_body_string.get(file_id).get(version).get(Integer.toString(i)).length);
+                pos_atual+=this.chunk_body_string.get(file_id).get(version).get(Integer.toString(i)).length;
             }
 
         } catch (Exception e) {
@@ -659,7 +680,7 @@ public class Server {
         if(this.files_info.containsKey(file_id) && this.files_info.get(file_id).containsKey(version))
         {
             this.files_info.get(file_id).remove(version);
-            if(this.files_info.info.get(file_id).size()==0)
+            if(this.files_info.get(file_id).size()==0)
                 this.files_info.remove(file_id);
         }
         else
@@ -724,7 +745,6 @@ public class Server {
             String sender_id = mensagem[2];
             String file_id = mensagem[3];
             String chunk_no = mensagem[4];
-            System.out.println(chunk_no); //TODO: isto é necessario ou é so verificacoes?
             if (this.confirmation.containsKey(file_id)) {
                 if (!this.confirmation.get(file_id).get(version).get(chunk_no).contains(sender_id))
                     this.confirmation.get(file_id).get(version).get(chunk_no).add(sender_id);
@@ -739,29 +759,11 @@ public class Server {
             String sender_id = mensagem[2];
             String file_id = mensagem[3];
             String chunk_no = mensagem[4];
-            String body="";
             if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(version)
                     && this.info.get(file_id).get(version).containsKey(chunk_no)) {
                 
                 String file_path="./files/server/"+this.server_number+"/save/"+file_id+"/"+version+"/"+chunk_no;
-                try {
-                    String line;
-                    FileReader fileReader = new FileReader(file_path);
-                    BufferedReader bufferedReader = new BufferedReader(fileReader);
-                    line = bufferedReader.readLine();
-                    line = bufferedReader.readLine();
-                    line = bufferedReader.readLine();
-                    line = bufferedReader.readLine();
-                    line = bufferedReader.readLine();
-                    while((line = bufferedReader.readLine())!=null)
-                    {
-                        body+=line;
-                    }
-                    bufferedReader.close();
-                } catch (IOException e) {
-                    System.out.println("Couldn\'t read from the chunk file. Skipping...");
-                    return;
-                }
+                byte[] body= this.readAnyFile(file_path);
 
                 try {
                     Message message = new Message(new String[]{"CHUNK",version,Integer.toString(this.server_number),file_id,chunk_no});
@@ -840,7 +842,7 @@ public class Server {
         }
     }
 
-    public Boolean sendChunkMessage(Message message,String body)
+    public Boolean sendChunkMessage(Message message,byte[] body)
     {
         try {
             System.out.println("Sending message to MDB.");
@@ -856,7 +858,7 @@ public class Server {
     public void MDRmessageReceived() {
         System.out.println("Received a multicast data recovery channel message");
         String[] mensagem = this.MDR.getMessage();
-        String body = this.MDR.getBody().trim();
+        byte[] body = this.MDR.getBody();
         String version = mensagem[1];
         String sender_id = mensagem[2];
         String file_id = mensagem[3];
@@ -889,5 +891,20 @@ public class Server {
     public void tooMuchChunks()
     {
         //TODO Passou o limite de espaço do servidor. Medido em quantidade de chunks maximo que pode guardar. Cada chunk tem no maximo 64K. Ele conta sempre 64K é por isso que só estou a contar o numero de chunks
+    }
+
+    public byte[] readAnyFile(String path)
+    {
+        File file = new File(path);
+        byte fileContent[] = new byte[(int)file.length()];
+        try {
+            FileInputStream fin = new FileInputStream(file);
+            fin.read(fileContent);
+            return fileContent;
+        }
+        catch (Exception e) {
+            System.out.println("Error reading file");
+            return null;
+        }
     }
 }

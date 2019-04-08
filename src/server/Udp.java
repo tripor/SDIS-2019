@@ -16,13 +16,13 @@ public class Udp implements Runnable {
 
     private MulticastSocket socket;
 
-    private static final int MAX_SIZE_PACKET = 65536;
+    private static final int MAX_SIZE_PACKET = 64500;
     public static final char CR = 0xD;
     public static final char LF = 0xA;
     public static final String CRLF = "" + Udp.CR + Udp.LF;
 
     private String[] message_received;
-    private String body_received;
+    private byte[] body_received;
 
     private String message_sent = "";
 
@@ -92,15 +92,21 @@ public class Udp implements Runnable {
      * @param message PutChunk message to send
      * @param body    PutChunk body to send
      */
-    public void sendMessageBody(String message, String body) {
+    public void sendMessageBody(String message, byte[] body) {
         this.message_sent = message;
-        message += Udp.CRLF + Udp.CRLF + body;
-        DatagramPacket packet = new DatagramPacket(message.getBytes(), message.length(), this.group, this.port);
+        message += Udp.CRLF + Udp.CRLF;
+
+        byte[] mandar= new byte[message.getBytes().length+body.length];
+        System.arraycopy(message.getBytes(),0,mandar,0,message.getBytes().length);
+        System.arraycopy(body, 0, mandar, message.getBytes().length, body.length);
+
+
+        DatagramPacket packet = new DatagramPacket(mandar, mandar.length, this.group, this.port);
 
         try {
             this.socket.send(packet);
         } catch (IOException e) {
-            System.out.println("A error as ocurred while trying to send a message to the multi cast socket.");
+            System.out.println("A error as ocurred while trying to send a message with body to the multi cast socket.");
             System.exit(2);
         }
     }
@@ -109,7 +115,7 @@ public class Udp implements Runnable {
         return this.message_received;
     }
 
-    public String getBody() {
+    public byte[] getBody() {
         return this.body_received;
     }
 
@@ -128,8 +134,13 @@ public class Udp implements Runnable {
             String message = new String(receber.getData());
             String[] splited = message.split(Udp.CRLF);
             String[] message_splited = splited[0].split(" ");
+
+            byte[] body_receber= new byte[receber.getData().length-(splited[0].length()+4)];
+
+            System.arraycopy(receber.getData(), splited[0].length()+4, body_receber, 0, receber.getData().length-(splited[0].length()+4));
+
             this.message_received = message_splited;
-            this.body_received = splited[splited.length - 1];
+            this.body_received = body_receber;
             Message test;
             try {
                 test = new Message(message_splited);

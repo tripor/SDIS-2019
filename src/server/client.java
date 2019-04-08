@@ -13,10 +13,11 @@ class Client
             System.exit(1);
         }
 
-        try {
+        try {/*
             Registry registry = LocateRegistry.getRegistry();
             ClientInterface stub = (ClientInterface) registry.lookup(args[0]);
             //String response = stub.request(algo);
+            
             switch(args[1])
             {
                 case "BACKUP": case "backup":
@@ -67,7 +68,7 @@ class Client
                 default:
                     System.err.println("The protocol entered : " + args[1] + " doesn't correspond to a valid protocol!");
                     System.exit(1);
-            }
+            }*/
         } catch (Exception e) {
 
             System.err.println("Client exception: " + e.toString());
