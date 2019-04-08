@@ -816,7 +816,12 @@ public class Server {
                 }
                 this.info.get(file_id).remove(version);
                 if(this.info.get(file_id).size()==0)
+                {
                     this.info.remove(file_id);
+                    String path2="./files/server/"+this.server_number+"/save/"+file_id;
+                    File dir2= new File(path2);
+                    dir2.delete();
+                }
             }
             this.saveInfo();
         }
