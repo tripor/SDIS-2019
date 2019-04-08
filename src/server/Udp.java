@@ -39,7 +39,7 @@ public class Udp implements Runnable {
         try {
             this.group = InetAddress.getByName(address);
         } catch (Exception e) {
-            System.out.println("A error as ocurred while trying to set up the address of the network.");
+            System.out.println("An error has ocurred while trying to set up the address of the network.");
             System.exit(1);
         }
         this.port = port;
@@ -49,7 +49,7 @@ public class Udp implements Runnable {
             this.socket.joinGroup(this.group);
         } catch (Exception e) {
             System.out.println(
-                    "A error as ocurred while trying to set up the multi cast socket. Port number or address incorrect.");
+                    "An error has ocurred while trying to set up the multi cast socket. Port number or address incorrect.");
             System.exit(1);
         }
 

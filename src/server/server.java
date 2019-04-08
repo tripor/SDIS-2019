@@ -2,12 +2,17 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
+import java.rmi.registry.Registry;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 
 import java.util.Random;
 
 public class Server {
 
     private int server_number;
+    private String protocol_version;
 
     private Udp MDB;
     private Udp MC;
@@ -21,16 +26,17 @@ public class Server {
     private HashMap<String, HashMap<String, Integer>> files_info = new HashMap<String, HashMap<String, Integer>>();
 
     public static void main(String[] args) {
-        if (args.length != 3) {
+        if (args.length != 5) { //TODO inputs dos arguments vao ainda ser diferentes +info em section 3
             System.out.println(
-                    "\nNo arguments provided. Use make server arguments=\"<IP address> <port number> <server number>\"\n");
+                    "\nNo arguments provided. Use make server arguments=\"<protocol version> <server id> <access point> <IP address> <port number>\"\n");
             System.exit(1);
         }
-        Server server = new Server(args[0], Integer.parseInt(args[1]));
-        server.setServerNumber(Integer.parseInt(args[2]));
+        Server server = new Server(args[3], Integer.parseInt(args[4]));
+        server.setServerNumber(Integer.parseInt(args[1]));
+        server.setProtocolVersion(args[0]);
         server.readInfo();
         server.readFileInfo();
-        server.run();
+        server.run(args[2]);
     }
 
     public Server(String address, int port) {
@@ -42,7 +48,7 @@ public class Server {
     /**
      * Função chamada no inicio do programa
      */
-    public void run() {
+    public void run(String access_point) {
         // Create the server local storage directory
         String path = "./files/server/" + this.server_number + "/save/";
         File directory = new File(path);
@@ -50,9 +56,24 @@ public class Server {
             directory.mkdirs();
 
         try {
+            DBS obj = new DBS(this);
+            ClientInterface stub = (ClientInterface) UnicastRemoteObject.exportObject(obj, 0);
+
+            // Bind the remote object's stub in the registry
+            Registry registry = LocateRegistry.getRegistry();
+            registry.bind(access_point, stub);
+
+            System.err.println("Server ready");
+        } catch (Exception e) {
+            System.err.println("Server exception: " + e.toString());
+            e.printStackTrace();
+        }
+        
+        /*
+        try {
             if (this.server_number == 1) {
-                this.sendDeletemessage("1.1", "./files/client/t.txt");
-                //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
+                //this.sendDeletemessage("1.1", "./files/client/t.txt");
+                this.sendPutChunkMessage("1.1", "./files/client/t.txt", 2);
             } else {
                 // this.MDB.receive();
             }
@@ -60,7 +81,7 @@ public class Server {
         } catch (Exception e) {
             System.out.println("Message format wrong");
             System.exit(3);
-        }
+        }*/
 
     }
 
@@ -332,7 +353,7 @@ public class Server {
             int inicio, fim;
             inicio = 0;
             fim = 63999;
-            for (int j = 1; j <= divisoes; j++) {
+            for (int j = 0; j < divisoes; j++) {
                 System.out.println("Sending chunk number " + j);
                 String chunk_no_j = Integer.toString(j);
                 String mandar = body_completo.substring(inicio, fim);
@@ -367,7 +388,7 @@ public class Server {
                     this.confirmation.put(mensagem.getFileId(), version_hash);
                 }
                 int i = 0;
-                while (this.confirmation.get(mensagem.getFileId()).get(version).get(chunk_no_j).size() < rep_deg) {
+                while (this.confirmation.get(mensagem.getFileId()).get(version).get(chunk_no_j).size() < rep_deg) { //todo -1? visto que o proprio server que tem o ficheiro tb conta para o rep degree
                     if (i != 0 && i != 6)
                         System.out.println("Peers didn't respond on time. Retrying...");
                     i++;
@@ -392,7 +413,7 @@ public class Server {
             Message mensagem = null;
             try {
                 mensagem = new Message(new String[] { "PUTCHUNK", version, Integer.toString(this.server_number), path,
-                        "1", Integer.toString(rep_deg) });
+                        "0", Integer.toString(rep_deg) });
                 mensagem.hashFileId();
             } catch (Exception e) {
                 System.out.println("Message format wrong");
@@ -401,22 +422,22 @@ public class Server {
             ArrayList<String> nada = new ArrayList<String>();
             if (this.confirmation.containsKey(mensagem.getFileId())) {
                 if (this.confirmation.get(mensagem.getFileId()).containsKey(version)) {
-                    this.confirmation.get(mensagem.getFileId()).get(version).put("1", nada);
+                    this.confirmation.get(mensagem.getFileId()).get(version).put("0", nada);
                 } else {
                     HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
-                    chunk_no_hash.put("1", nada);
+                    chunk_no_hash.put("0", nada);
                     this.confirmation.get(mensagem.getFileId()).put(version, chunk_no_hash);
                 }
             } else {
                 System.out.println(mensagem.getFileId());
                 HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
-                chunk_no_hash.put("1", nada);
+                chunk_no_hash.put("0", nada);
                 HashMap<String, HashMap<String, ArrayList<String>>> version_hash = new HashMap<String, HashMap<String, ArrayList<String>>>();
                 version_hash.put(version, chunk_no_hash);
                 this.confirmation.put(mensagem.getFileId(), version_hash);
             }
             int i = 0;
-            while (this.confirmation.get(mensagem.getFileId()).get(version).get("1").size() < rep_deg) {
+            while (this.confirmation.get(mensagem.getFileId()).get(version).get("0").size() < rep_deg) { //todo -1?
                 if (i != 0 && i != 6)
                     System.out.println("Peers didn't respond on time. Retrying...");
                 i++;
@@ -525,10 +546,13 @@ public class Server {
                 this.info.put(file_id, version_hash);
             }
         } else {
-            this.info.get(file_id).get(version).put(chunk_no, inserir);
+            this.info.get(file_id).get(version).put(chunk_no, inserir); //TODO: verificar isto aqui prq isto já implementa enhancement da section 3.2
+            //alem disso vai ser possivel este chunk já ter informacao, se eu tentar fazer um putchunk do mesmo file 2 vezes
+            //Com enhancement:Acho que a approuch indicada aqui seria fazer um delete deste file e de seguida fazer um novo putchunk dele
+            //Sem enhancement: Criar um segundo file com o mesmo nome +(x) como se fosse uma outra copia daquele ficheiro
         }
-        this.saveInfo();
-        this.number_of_chunks++;
+        this.saveInfo(); // TODO: tal como o todo anterior aqui está a dar overwrite ao mesmo chunk que já lá tinha, o que kinda faz parte do enhancement
+        this.number_of_chunks++; //tal como referido anteriormente aqui pode-se estar a aumentar o numero de chunks quando na realidade ele não aumenta visto que nao cria nenhum file adicional se este ja existir
         if(this.number_of_chunks>this.max_number_of_chunks)this.tooMuchChunks();
         try {
             Random rand = new Random();
@@ -557,6 +581,7 @@ public class Server {
         return true;
     }
 
+    //TODO que vai fazer com a informaçao do restore? Provavelmente criar um ficheiro com essa info 
     public String sendGetChunkMessage(String version, String file_id) {
         int number_of_chunks;
         if (this.files_info.containsKey(file_id) && this.files_info.get(file_id).containsKey(version)) {
@@ -573,7 +598,7 @@ public class Server {
                 return null;
             }
 
-            for (int i = 1; i <= number_of_chunks; i++) {
+            for (int i = 0; i < number_of_chunks; i++) {
                 System.out.println("Getting chunk number "+i);
                 if(this.chunk_body_string.containsKey(file_id))
                 {
@@ -627,8 +652,10 @@ public class Server {
 
     }
 
+    //TODO nao esta a apagar o directorio files do server o que seria suposto
     public Boolean sendDeletemessage(String version,String file_id)
     {
+        //TODO falta apagar o file original não só os chunks dele guardados noutros servers/peers. E talvez o this.info tal como o file info tambem??
         if(this.files_info.containsKey(file_id) && this.files_info.get(file_id).containsKey(version))
         {
             this.files_info.get(file_id).remove(version);
@@ -695,7 +722,7 @@ public class Server {
             String sender_id = mensagem[2];
             String file_id = mensagem[3];
             String chunk_no = mensagem[4];
-            System.out.println(chunk_no);
+            System.out.println(chunk_no); //TODO: isto é necessario ou é so verificacoes?
             if (this.confirmation.containsKey(file_id)) {
                 if (!this.confirmation.get(file_id).get(version).get(chunk_no).contains(sender_id))
                     this.confirmation.get(file_id).get(version).get(chunk_no).add(sender_id);
@@ -736,7 +763,16 @@ public class Server {
 
                 try {
                     Message message = new Message(new String[]{"CHUNK",version,Integer.toString(this.server_number),file_id,chunk_no});
+
+                    Random rand = new Random();
+                    int n = rand.nextInt(401);
+                    Thread.sleep(n);
                     this.sendChunkMessage(message, body);
+
+                } catch (InterruptedException e) {
+                    System.out.println("Thread was interrupted.");
+                    Thread.currentThread().interrupt();
+                    return;
                 } catch (Exception e) {
                     System.out.println("Message with wrong format");
                     return;
@@ -827,6 +863,14 @@ public class Server {
 
     public void setServerNumber(int number) {
         this.server_number = number;
+    }
+
+    public void setProtocolVersion(String ver) {
+        this.protocol_version = ver;
+    }
+
+    public String getVersion() {
+        return this.protocol_version;
     }
 
     public int getServerNumber() {

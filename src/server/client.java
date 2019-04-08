@@ -1,8 +1,6 @@
 import java.io.*;
 import java.util.*;
 
-import server.ClientInterface; // da erro dont know why...
-
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 

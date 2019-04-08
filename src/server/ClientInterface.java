@@ -7,19 +7,13 @@ import java.rmi.Remote;
 import java.rmi.server.UnicastRemoteObject;
 
 public interface ClientInterface extends Remote {
-    String request(String opr) throws RemoteException;
+    void backup(String path,String repDeg) throws RemoteException;
+
+    void restore(String path) throws RemoteException;
+
+    void delete(String path) throws RemoteException;
+
+    void reclaim(String newSize) throws RemoteException;
+
+    void state() throws RemoteException;
 }
-
-/* 
-* Class where the client interface will be implemented
-* DBS-distributed backup service
-*/
-/*public class DBS implements ClientInterface {
-    public DBS() {}
-
-    public String request(String opr) {
-
-        System.out.println("Server processing message: " + opr + "...");
-    }
-
-}*/
