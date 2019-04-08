@@ -659,6 +659,8 @@ public class Server {
         if(this.files_info.containsKey(file_id) && this.files_info.get(file_id).containsKey(version))
         {
             this.files_info.get(file_id).remove(version);
+            if(this.files_info.info.get(file_id).size()==0)
+                this.files_info.remove(file_id);
         }
         else
         {
@@ -813,7 +815,8 @@ public class Server {
                     }
                 }
                 this.info.get(file_id).remove(version);
-                
+                if(this.info.get(file_id).size()==0)
+                    this.info.remove(file_id);
             }
             this.saveInfo();
         }
