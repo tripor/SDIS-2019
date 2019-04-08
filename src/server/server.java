@@ -73,15 +73,15 @@ public class Server {
         try {
             if (this.server_number == 1) {
                 //this.sendDeletemessage("1.1", "./files/client/cell.jpg");
-                //this.sendPutChunkMessage("1.1", "./files/client/cell.jpg", 1);
-                this.saveFile("./files/client/cell.jpg", this.sendGetChunkMessage("1.2", "./files/client/cell.jpg"));
+                //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
+                //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
             } else {
                 // this.MDB.receive();
             }
 
         } catch (Exception e) {
             System.out.println("Message format wrong");
-            System.exit(3);
+            //System.exit(3);
         }
 
     }
@@ -345,12 +345,12 @@ public class Server {
             for (int j = 0; j < divisoes; j++) {
                 System.out.println("Sending chunk number " + j);
                 String chunk_no_j = Integer.toString(j);
+                if (fim > body_completo.length-1)
+                    fim = body_completo.length-1;
+                byte[] mandar= new byte[fim-inicio+1];
+                System.arraycopy(body_completo, inicio, mandar, 0, fim-inicio+1);
                 inicio += 64000;
                 fim += 64000;
-                if (fim > body_completo.length)
-                    fim = body_completo.length;
-                byte[] mandar= new byte[inicio-fim];
-                System.arraycopy(body_completo, inicio, mandar, 0, inicio-fim);
 
                 Message mensagem = null;
                 try {
@@ -606,11 +606,11 @@ public class Server {
         if (this.files_info.containsKey(file_id) && this.files_info.get(file_id).containsKey(version)) {
             number_of_chunks = this.files_info.get(file_id).get(version).intValue();
         } else {
-            System.out.println("This peer doesn't own this file");
+            System.out.println("This peer doesn't own this file. (GETCHUNK)");
             return null;
         }
+        byte[] devolver= new byte[this.files_info.get(file_id).get(version)*64500];
         file_id = Message.getSHA(file_id);
-        byte[] devolver= new byte[64500];
         int pos_atual=0;
         try {
             if (this.chunk_body_string.containsKey(file_id) && this.chunk_body_string.get(file_id).containsKey(version)) {

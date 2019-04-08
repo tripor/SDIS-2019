@@ -135,9 +135,9 @@ public class Udp implements Runnable {
             String[] splited = message.split(Udp.CRLF);
             String[] message_splited = splited[0].split(" ");
 
-            byte[] body_receber= new byte[receber.getData().length-(splited[0].length()+4)];
+            byte[] body_receber= new byte[receber.getLength()-(splited[0].length()+4)];
 
-            System.arraycopy(receber.getData(), splited[0].length()+4, body_receber, 0, receber.getData().length-(splited[0].length()+4));
+            System.arraycopy(receber.getData(), splited[0].length()+4, body_receber, 0, receber.getLength()-(splited[0].length()+4));
 
             this.message_received = message_splited;
             this.body_received = body_receber;
