@@ -72,7 +72,7 @@ public class Server {
         
         try {
             if (this.server_number == 1) {
-                //this.sendDeletemessage("1.1", "./files/client/cell.jpg");
+                this.sendDeletemessage("1.1", "./files/client/t.txt");
                 //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
                 //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
             } else {
@@ -723,7 +723,7 @@ public class Server {
      */
     public Boolean MCsendMessage(Message message) {
         try {
-            System.out.println("Sending message to MDB.");
+            System.out.println("Sending message to MC.");
             this.MC.sendMessage(message.getMessage());
         } catch (Exception e) {
             System.out.println("Couldn't send a control message. Skipping...");

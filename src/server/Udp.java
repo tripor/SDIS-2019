@@ -2,6 +2,10 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class Udp implements Runnable {
 
@@ -32,10 +36,10 @@ public class Udp implements Runnable {
      * @param address The ip address of the connection
      * @param port    The port of the connection
      */
-    public Udp(String address, int port, Server server,String type) {
+    public Udp(String address, int port, Server server, String type) {
         this.belong = server;
         this.address_name = address;
-        this.socket_name=type;
+        this.socket_name = type;
         try {
             this.group = InetAddress.getByName(address);
         } catch (Exception e) {
@@ -96,10 +100,9 @@ public class Udp implements Runnable {
         this.message_sent = message;
         message += Udp.CRLF + Udp.CRLF;
 
-        byte[] mandar= new byte[message.getBytes().length+body.length];
-        System.arraycopy(message.getBytes(),0,mandar,0,message.getBytes().length);
+        byte[] mandar = new byte[message.getBytes().length + body.length];
+        System.arraycopy(message.getBytes(), 0, mandar, 0, message.getBytes().length);
         System.arraycopy(body, 0, mandar, message.getBytes().length, body.length);
-
 
         DatagramPacket packet = new DatagramPacket(mandar, mandar.length, this.group, this.port);
 
@@ -135,9 +138,10 @@ public class Udp implements Runnable {
             String[] splited = message.split(Udp.CRLF);
             String[] message_splited = splited[0].split(" ");
 
-            byte[] body_receber= new byte[receber.getLength()-(splited[0].length()+4)];
+            byte[] body_receber = new byte[receber.getLength() - (splited[0].length() + 4)];
 
-            System.arraycopy(receber.getData(), splited[0].length()+4, body_receber, 0, receber.getLength()-(splited[0].length()+4));
+            System.arraycopy(receber.getData(), splited[0].length() + 4, body_receber, 0,
+                    receber.getLength() - (splited[0].length() + 4));
 
             this.message_received = message_splited;
             this.body_received = body_receber;
@@ -151,19 +155,34 @@ public class Udp implements Runnable {
                 System.out.println("Message received with wrong format");
                 continue;
             }
-            if(this.socket_name.equals("MDB"))
-            {
-                this.belong.MDBmessageReceived();
-            }
-            else if(this.socket_name.equals("MC"))
-            {
-                this.belong.MCmessageReceived();
-            }
-            else if(this.socket_name.equals("MDR"))
-            {
-                this.belong.MDRmessageReceived();
-            }
-        }
+            
+            ExecutorService service =  Executors.newSingleThreadExecutor();
+            Task task = new Task(this.socket_name,this.belong);
+            Future<Integer> future = service.submit(task);
 
+        }
     }
 }
+
+
+class Task implements Callable<Integer> {
+    private String socket_name;
+    private Server belong;
+        
+    public Task(String socket,Server belong)
+    {
+        this.socket_name=socket;
+        this.belong=belong;
+    }
+	@Override
+	public Integer call() throws Exception {
+        if (this.socket_name.equals("MDB")) {
+            this.belong.MDBmessageReceived();
+        } else if (this.socket_name.equals("MC")) {
+            this.belong.MCmessageReceived();
+        } else if (this.socket_name.equals("MDR")) {
+            this.belong.MDRmessageReceived();
+        }
+		return 1;
+	}
+} 
