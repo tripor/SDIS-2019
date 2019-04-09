@@ -32,11 +32,11 @@ public class DBS implements ClientInterface {
     public void restore(String path) {
 
         try {
-            this.belong.sendGetChunkMessage(this.belong.getVersion(), path);
+            this.belong.saveFile(path, this.belong.sendGetChunkMessage(this.belong.getVersion(), path));
 
         } catch (Exception e) {
             System.out.println("Message format wrong");
-            System.exit(3);
+            //System.exit(3);
         }
 
     }

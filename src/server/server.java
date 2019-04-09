@@ -54,7 +54,7 @@ public class Server {
         File directory = new File(path);
         if (!directory.exists())
             directory.mkdirs();
-        /*
+        
         try {
             DBS obj = new DBS(this);
             ClientInterface stub = (ClientInterface) UnicastRemoteObject.exportObject(obj, 0);
@@ -68,8 +68,8 @@ public class Server {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
         }
-        */
         
+        /*
         try {
             if (this.server_number == 1) {
                 //this.sendDeletemessage("1.1", "./files/client/cell.jpg");
@@ -82,7 +82,7 @@ public class Server {
         } catch (Exception e) {
             System.out.println("Message format wrong");
             //System.exit(3);
-        }
+        }*/
 
     }
 
