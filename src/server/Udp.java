@@ -20,7 +20,7 @@ public class Udp implements Runnable {
 
     private MulticastSocket socket;
 
-    private static final int MAX_SIZE_PACKET = 64500;
+    private static final int MAX_SIZE_PACKET = 65000;
     public static final char CR = 0xD;
     public static final char LF = 0xA;
     public static final String CRLF = "" + Udp.CR + Udp.LF;

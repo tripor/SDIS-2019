@@ -72,7 +72,7 @@ public class Server {
         
         try {
             if (this.server_number == 1) {
-                this.sendDeletemessage("1.1", "./files/client/t.txt");
+                //this.sendDeletemessage("1.1", "./files/client/t.txt");
                 //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
                 //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
             } else {
@@ -611,7 +611,7 @@ public class Server {
             System.out.println("This peer doesn't own this file. (GETCHUNK)");
             return null;
         }
-        byte[] devolver= new byte[this.files_info.get(file_id).get(version)*64500];
+        byte[] devolver= new byte[this.files_info.get(file_id).get(version)*64000];
         file_id = Message.getSHA(file_id);
         int pos_atual=0;
         try {
