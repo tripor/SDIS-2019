@@ -485,9 +485,10 @@ public class Server {
         String[] mensagem = this.MDB.getMessage();
         byte[] body = this.MDB.getBody();
         String version = mensagem[1];
-        String sender_id = mensagem[2];
+        //String sender_id = mensagem[2];
         String file_id = mensagem[3];
         String chunk_no = mensagem[4];
+        String rep = mensagem[5];
         String path = "./files/server/" + this.server_number + "/save/" + file_id + "/" + version + "/";
         String file_path = path + "/" + chunk_no;
         File directory = new File(path);
@@ -495,6 +496,7 @@ public class Server {
             directory.mkdirs();
         File save_file = new File(file_path);
         ArrayList<String> inserir = new ArrayList<String>();
+        inserir.add(rep);
         inserir.add(Integer.toString(this.server_number));
         if (!save_file.exists()) {
             try {
