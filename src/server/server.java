@@ -73,7 +73,7 @@ public class Server {
         try {
             if (this.server_number == 1) {
                 //this.sendDeletemessage("1.1", "./files/client/t.txt");
-                //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
+                this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
                 //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
             } else {
                 // this.MDB.receive();
@@ -496,7 +496,7 @@ public class Server {
             directory.mkdirs();
         File save_file = new File(file_path);
         ArrayList<String> inserir = new ArrayList<String>();
-        inserir.add(rep);
+        inserir.add("REP"+rep);
         inserir.add(Integer.toString(this.server_number));
         if (!save_file.exists()) {
             try {
@@ -538,8 +538,7 @@ public class Server {
             //Sem enhancement: Criar um segundo file com o mesmo nome +(x) como se fosse uma outra copia daquele ficheiro
         }
         this.saveInfo(); // TODO: tal como o todo anterior aqui está a dar overwrite ao mesmo chunk que já lá tinha, o que kinda faz parte do enhancement
-        this.number_of_chunks++; //tal como referido anteriormente aqui pode-se estar a aumentar o numero de chunks quando na realidade ele não aumenta visto que nao cria nenhum file adicional se este ja existir
-        if(this.number_of_chunks>this.max_number_of_chunks)this.tooMuchChunks();
+        this.tooMuchChunks();
         try {
             Random rand = new Random();
             int n = rand.nextInt(401);
@@ -892,7 +891,8 @@ public class Server {
 
     public void tooMuchChunks()
     {
-        //TODO Passou o limite de espaço do servidor. Medido em quantidade de chunks maximo que pode guardar. Cada chunk tem no maximo 64K. Ele conta sempre 64K é por isso que só estou a contar o numero de chunks
+        //TODO 
+        // Verificar se o limite total foi ultrapassado
     }
 
     public byte[] readAnyFile(String path)
