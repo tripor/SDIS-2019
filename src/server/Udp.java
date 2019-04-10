@@ -118,6 +118,13 @@ public class Udp implements Runnable {
     public byte[] getBody() {
         return this.body_received;
     }
+    public void setMessage(String[] message) {
+        this.message_received=message;
+    }
+
+    public void setBody(byte[] body) {
+        this.body_received=body;
+    }
 
     @Override
     public void run() {
@@ -131,30 +138,8 @@ public class Udp implements Runnable {
                 System.exit(2);
 
             }
-            String message = new String(receber.getData());
-            String[] splited = message.split(Udp.CRLF);
-            String[] message_splited = splited[0].split(" ");
-
-            byte[] body_receber = new byte[receber.getLength() - (splited[0].length() + 4)];
-
-            System.arraycopy(receber.getData(), splited[0].length() + 4, body_receber, 0,
-                    receber.getLength() - (splited[0].length() + 4));
-
-            this.message_received = message_splited;
-            this.body_received = body_receber;
-            Message test;
-            try {
-                test = new Message(message_splited);
-                if (this.message_sent.equals(test.getMessage())) {
-                    continue;
-                }
-            } catch (Exception e) {
-                System.out.println("Message received with wrong format");
-                continue;
-            }
-            
             ExecutorService service =  Executors.newSingleThreadExecutor();
-            Task task = new Task(this.socket_name);
+            Task task = new Task(this.socket_name,receber,this);
             Future<Integer> future = service.submit(task);
 
         }
@@ -164,13 +149,40 @@ public class Udp implements Runnable {
 
 class Task implements Callable<Integer> {
     private String socket_name;
+    private DatagramPacket receber;
+    private Udp canal;
         
-    public Task(String socket)
+    public Task(String socket,DatagramPacket receber,Udp canal)
     {
+        this.canal=canal;
         this.socket_name=socket;
+        this.receber=receber;
     }
 	@Override
 	public Integer call() throws Exception {
+        
+        String message = new String(receber.getData());
+        String[] splited = message.split(Udp.CRLF);
+        String[] message_splited = splited[0].split(" ");
+
+        byte[] body_receber = new byte[receber.getLength() - (splited[0].length() + 4)];
+
+        System.arraycopy(receber.getData(), splited[0].length() + 4, body_receber, 0,
+                receber.getLength() - (splited[0].length() + 4));
+
+        this.canal.setMessage(message_splited);
+        this.canal.setBody(body_receber);
+
+        Message test;
+        try {
+            test = new Message(message_splited);
+            if (Server.singleton.getServerNumber().equals(test.getSenderId())) {
+                return 0;
+            }
+        } catch (Exception e) {
+            System.out.println("Message received with wrong format");
+            return 0;
+        }
         if (this.socket_name.equals("MDB")) {
             Server.singleton.MDBmessageReceived();
         } else if (this.socket_name.equals("MC")) {

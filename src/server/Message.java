@@ -140,4 +140,9 @@ public class Message {
             return null; 
         } 
     } 
+
+    public String getSenderId()
+    {
+        return this.Senderid;
+    }
 }

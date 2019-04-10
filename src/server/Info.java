@@ -169,7 +169,7 @@ public class Info {
                         ArrayList<String> senders = new ArrayList<String>();
                         for (int t = 0; t < rep; t++) {
                             String senderID = bufferedReader.readLine();
-                            if(senderID.equals(Integer.toString(Server.singleton.getServerNumber())))
+                            if(senderID.equals(Server.singleton.getServerNumber()))
                             {
                                 //TODO Server.singleton. number_of_chunks++;
                             }

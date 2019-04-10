@@ -13,7 +13,7 @@ public class Server {
 
     public static Server singleton;
 
-    private int server_number;
+    private String server_number;
     private String protocol_version;
 
     private Udp MDB;
@@ -36,11 +36,11 @@ public class Server {
                     "\nNo arguments provided. Use make server arguments=\"<protocol version> <server id> <access point> <IP address> <port number>\"\n");
             System.exit(1);
         }
-        Server server = new Server(args[0],Integer.parseInt(args[1]),args[3], Integer.parseInt(args[4]));
+        Server server = new Server(args[0],args[1],args[3], Integer.parseInt(args[4]));
         server.run(args[2]);
     }
 
-    public Server(String version,int server_number, String address, int port) {
+    public Server(String version,String server_number, String address, int port) {
         Server.singleton=this;
         this.server_number=server_number;
         this.protocol_version=version;
@@ -81,10 +81,10 @@ public class Server {
         
         
         try {
-            if (this.server_number == 1) {
+            if (this.server_number.equals("1")) {
                 //this.sendDeletemessage("1.1", "./files/client/t.txt");
-                //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
-                this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
+                this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
+                //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
             } else {
                 // this.MDB.receive();
             }
@@ -120,53 +120,70 @@ public class Server {
         int inicio, fim;
         inicio = 0;
         fim = 63999;
+        byte[][] guardar=new byte[divisoes][];
+        Boolean[] mensagem_confirmadas= new Boolean[divisoes];
+
         for (int j = 0; j < divisoes; j++) {
-            System.out.println("Sending chunk number " + j);
+            mensagem_confirmadas[j]=false;
             String chunk_no_j = Integer.toString(j);
             if (fim > body_completo.length-1)
                 fim = body_completo.length-1;
             byte[] mandar= new byte[fim-inicio+1];
             System.arraycopy(body_completo, inicio, mandar, 0, fim-inicio+1);
+            guardar[j]=mandar;
             inicio += 64000;
             fim += 64000;
-
-            Message mensagem = null;
-            try {
-                mensagem = new Message(new String[] { "PUTCHUNK", version, Integer.toString(this.server_number),
-                        path, chunk_no_j, Integer.toString(rep_deg) });
-                mensagem.hashFileId();
-            } catch (Exception e) {
-                System.out.println("Message format wrong");
-                return;
-            }
+            String encoded_file_id=Message.getSHA(path);
             ArrayList<String> nada = new ArrayList<String>();
-            if (this.confirmation.containsKey(mensagem.getFileId())) {
-                this.confirmation.get(mensagem.getFileId()).put(chunk_no_j, nada);
+            if (this.confirmation.containsKey(encoded_file_id)) {
+                this.confirmation.get(encoded_file_id).put(chunk_no_j, nada);
             } else {
                 HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
                 chunk_no_hash.put(chunk_no_j, nada);
-                this.confirmation.put(mensagem.getFileId(), chunk_no_hash);
-            }
-            int i = 1;
-            while (this.confirmation.get(mensagem.getFileId()).get(chunk_no_j).size() < rep_deg) { //todo -1? visto que o proprio server que tem o ficheiro tb conta para o rep degree
-                if (i != 1 && i != 32)
-                    System.out.println("Peers didn't respond on time. Retrying...");
-                if (i == 32) {
-                    System.out.println("Message couldn't be saved on servers");
-                    return;
-                }
-                System.out.println("Trying to save file.");
-                this.MDBsendMessage(mensagem, mandar);
-                try {
-                    Thread.sleep(i * 1000);
-
-                } catch (InterruptedException e) {
-                    System.out.println("Thread was interrupted.");
-                    Thread.currentThread().interrupt();
-                }
-                i*=2;
+                this.confirmation.put(encoded_file_id, chunk_no_hash);
             }
         }
+        int numero_mensagens_confirmadas=0;
+
+        int i = 1;
+        while(numero_mensagens_confirmadas<divisoes)
+        {
+            for (int j = 0; j < divisoes; j++) 
+            {
+                if(mensagem_confirmadas[j])continue;
+                String chunk_no_j=Integer.toString(j);
+                Message mensagem = null;
+                try {
+                    mensagem = new Message(new String[] { "PUTCHUNK", version, this.server_number,
+                            path, chunk_no_j, Integer.toString(rep_deg) });
+                    mensagem.hashFileId();
+                } catch (Exception e) {
+                    System.out.println("Message format wrong");
+                    return;
+                }
+
+                if(this.confirmation.get(mensagem.getFileId()).get(chunk_no_j).size() < rep_deg)
+                {
+                    System.out.println("Sending chunk number " + j);
+                    this.MDBsendMessage(mensagem, guardar[j]);
+                    this.waitAmount(100);
+                }
+                else
+                {
+                    mensagem_confirmadas[j]=true;
+                    numero_mensagens_confirmadas++;
+                }
+            }
+            try {
+                Thread.sleep(i * 1000);
+
+            } catch (InterruptedException e) {
+                System.out.println("Thread was interrupted.");
+                Thread.currentThread().interrupt();
+            }
+            i*=2;
+        }
+
         this.confirmation.clear();
         this.files_info.put(path, new Integer(divisoes));
         this.info_io.saveFileInfo();
@@ -212,7 +229,7 @@ public class Server {
         File save_file = new File(file_path);
         ArrayList<String> inserir = new ArrayList<String>();
         inserir.add("REP"+rep);
-        inserir.add(Integer.toString(this.server_number));
+        inserir.add(this.server_number);
         if (!save_file.exists()) {
             try {
                 save_file.createNewFile();
@@ -246,16 +263,8 @@ public class Server {
         }
         this.info_io.saveInfo(); // TODO: tal como o todo anterior aqui está a dar overwrite ao mesmo chunk que já lá tinha, o que kinda faz parte do enhancement
         this.tooMuchChunks();
-        try {
-            Random rand = new Random();
-            int n = rand.nextInt(401);
-            Thread.sleep(n);
-            this.sendStoredMessage(version, Integer.toString(this.server_number), file_id, chunk_no);
-
-        } catch (InterruptedException e) {
-            System.out.println("Thread was interrupted.");
-            Thread.currentThread().interrupt();
-        }
+        this.waitRandom();
+        this.sendStoredMessage(version,this.server_number, file_id, chunk_no);
 
     }
 
@@ -264,7 +273,7 @@ public class Server {
     public Boolean sendStoredMessage(String version, String sender_id, String file_id, String chunk_no) {
         try {
             Message mandar = new Message(
-                    new String[]{ "STORED", version, Integer.toString(this.server_number), file_id, chunk_no });
+                    new String[]{ "STORED", version, this.server_number, file_id, chunk_no });
             this.MCsendMessage(mandar);
         } catch (Exception e) {
             System.out.println("Couldn't send the STORED message. Skipping...");
@@ -335,7 +344,7 @@ public class Server {
                     version_hash.put(Integer.toString(i), null);
                     this.chunk_body_string.put(file_id, version_hash);
                 }
-                Message mandar = new Message(new String[] { "GETCHUNK", version, Integer.toString(this.server_number),
+                Message mandar = new Message(new String[] { "GETCHUNK", version,this.server_number,
                         file_id, Integer.toString(i) });
                 this.MCsendMessage(mandar);
                 int espera = 1;
@@ -381,7 +390,7 @@ public class Server {
             return false;
         }
         try {
-            Message mandar = new Message( new String[]{ "DELETE", version, Integer.toString(this.server_number), file_id});
+            Message mandar = new Message( new String[]{ "DELETE", version, this.server_number, file_id});
             mandar.hashFileId();
             this.MCsendMessage(mandar);
         } catch (Exception e) {
@@ -396,7 +405,7 @@ public class Server {
     public Boolean sendRemovedMessage(String version,String file_id,String chunk_no)
     {
         try {
-            Message mandar = new Message( new String[]{ "REMOVED", version, Integer.toString(this.server_number), file_id ,chunk_no});
+            Message mandar = new Message( new String[]{ "REMOVED", version,this.server_number, file_id ,chunk_no});
             this.MCsendMessage(mandar);
         } catch (Exception e) {
             System.out.println("Couldn't send the DELETE message. Skipping...");
@@ -457,17 +466,10 @@ public class Server {
                 byte[] body= this.readAnyFile(file_path);
 
                 try {
-                    Message message = new Message(new String[]{"CHUNK",version,Integer.toString(this.server_number),file_id,chunk_no});
-
-                    Random rand = new Random();
-                    int n = rand.nextInt(401);
-                    Thread.sleep(n);
+                    Message message = new Message(new String[]{"CHUNK",version,this.server_number,file_id,chunk_no});
+                    this.waitRandom();
                     this.sendChunkMessage(message, body);
 
-                } catch (InterruptedException e) {
-                    System.out.println("Thread was interrupted.");
-                    Thread.currentThread().interrupt();
-                    return;
                 } catch (Exception e) {
                     System.out.println("Message with wrong format");
                     return;
@@ -495,17 +497,8 @@ public class Server {
                 }
                 for(String chunks:this.info.get(file_id).keySet())
                 {
-                    try {
-                        Random rand = new Random();
-                        int n = rand.nextInt(401);
-                        Thread.sleep(n);
-                        this.sendRemovedMessage(version, file_id, chunks);
-            
-                    } catch (InterruptedException e) {
-                        System.out.println("Thread was interrupted.");
-                        Thread.currentThread().interrupt();
-                        return;
-                    }
+                    this.waitRandom();
+                    this.sendRemovedMessage(version, file_id, chunks);
                 }
                 this.info.remove(file_id);
                 String path2="./files/server/"+this.server_number+"/backup/"+file_id;
@@ -558,7 +551,7 @@ public class Server {
 
     }
 
-    public void setServerNumber(int number) {
+    public void setServerNumber(String number) {
         this.server_number = number;
     }
 
@@ -580,7 +573,7 @@ public class Server {
         return this.protocol_version;
     }
 
-    public int getServerNumber() {
+    public String getServerNumber() {
         return this.server_number;
     }
 
@@ -589,6 +582,27 @@ public class Server {
     {
         //TODO 
         // Verificar se o limite total foi ultrapassado
+    }
+
+    public void waitRandom()
+    {
+        try {
+            Random rand = new Random();
+            int n = rand.nextInt(401);
+            Thread.sleep(n);
+        } catch (InterruptedException e) {
+            System.out.println("Thread was interrupted.");
+            Thread.currentThread().interrupt();
+        }
+    }
+    public void waitAmount(int tempo)
+    {
+        try {
+            Thread.sleep(tempo);
+        } catch (InterruptedException e) {
+            System.out.println("Thread was interrupted.");
+            Thread.currentThread().interrupt();
+        }
     }
 
     public byte[] readAnyFile(String path)
