@@ -222,6 +222,11 @@ public class Server {
      */
     public void MDBmessageReceived(String[] mensagem,byte[] body) {
         System.out.println("Received a multicast data channel message");
+        if(this.current_size+body.length>this.max_size)
+        {
+            System.out.println("Server doesn't have enough space for saving the file. Skipping...");
+            return ;
+        }
         String version = mensagem[1];
         //String sender_id = mensagem[2];
         String file_id = mensagem[3];
@@ -265,7 +270,6 @@ public class Server {
             this.info.get(file_id).put(chunk_no, inserir);
         }
         this.info_io.saveInfo();
-        this.tooMuchChunks();
         this.waitRandom();
         this.sendStoredMessage(version,this.server_number, file_id, chunk_no);
 
@@ -499,6 +503,7 @@ public class Server {
                     for(File chunks:dir.listFiles())
                     {
                         chunks.delete();
+                        this.current_size-=chunks.length();
                     }
                     dir.delete();
                 }
@@ -519,7 +524,7 @@ public class Server {
             {
                 this.info.get(file_id).get(chunk_no).remove(sender_id);
             }
-            //TODO: verificar se o count de replicação esta direito, valor dentro do ficheiro. Se não mandar putchunk do body
+            this.checkRepDegree();
             this.info_io.saveInfo();
         }
     }
@@ -577,13 +582,6 @@ public class Server {
         return this.server_number;
     }
 
-
-    public void tooMuchChunks()
-    {
-        //TODO 
-        // Verificar se o limite total foi ultrapassado
-    }
-
     public void waitRandom()
     {
         try {
@@ -618,6 +616,12 @@ public class Server {
             System.out.println("Error reading file");
             return null;
         }
+    }
+
+    private void checkRepDegree()
+    {
+        //TODO: verificar se o count de replicação esta direito, valor dentro do ficheiro. Se não mandar putchunk do body
+
     }
 
 }
