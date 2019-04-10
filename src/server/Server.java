@@ -20,8 +20,8 @@ public class Server {
     private Udp MC;
     private Udp MDR;
 
-    private int max_number_of_chunks=100;
-    private int current_size=0;
+    private long max_size=10000;//bytes
+    private long current_size=0;
 
     // Fileid chunkNo rep degree
     private Info info_io;
@@ -48,6 +48,15 @@ public class Server {
         this.MDB = new Udp(address, port, "MDB");
         this.MC = new Udp(address, port + 1, "MC");
         this.MDR = new Udp(address, port + 2, "MDR");
+
+        String backup_path = "./files/server/" + Server.singleton.getServerNumber() + "/backup";
+        File backup_folder = new File(backup_path);
+        long size=0;
+        if(backup_folder.exists())
+        {
+            size=Info.folderSize(backup_folder);
+        }
+        Server.singleton.setCurrentSize(size);
     }
 
     /**
@@ -253,12 +262,9 @@ public class Server {
                 this.info.put(file_id, chunk_no_hash);
             }
         } else {
-            this.info.get(file_id).put(chunk_no, inserir); //TODO: verificar isto aqui prq isto já implementa enhancement da section 3.2
-            //alem disso vai ser possivel este chunk já ter informacao, se eu tentar fazer um putchunk do mesmo file 2 vezes
-            //Com enhancement:Acho que a approuch indicada aqui seria fazer um delete deste file e de seguida fazer um novo putchunk dele
-            //Sem enhancement: Criar um segundo file com o mesmo nome +(x) como se fosse uma outra copia daquele ficheiro
+            this.info.get(file_id).put(chunk_no, inserir);
         }
-        this.info_io.saveInfo(); // TODO: tal como o todo anterior aqui está a dar overwrite ao mesmo chunk que já lá tinha, o que kinda faz parte do enhancement
+        this.info_io.saveInfo();
         this.tooMuchChunks();
         this.waitRandom();
         this.sendStoredMessage(version,this.server_number, file_id, chunk_no);
@@ -380,10 +386,8 @@ public class Server {
 
     }
 
-    //TODO nao esta a apagar o directorio files do server o que seria suposto
     public Boolean sendDeletemessage(String version,String file_id)
     {
-        //TODO falta apagar o file original não só os chunks dele guardados noutros servers/peers. E talvez o this.info tal como o file info tambem??
         if(this.files_info.containsKey(file_id))
         {
             this.files_info.remove(file_id);
@@ -412,7 +416,7 @@ public class Server {
             Message mandar = new Message( new String[]{ "REMOVED", version,this.server_number, file_id ,chunk_no});
             this.MCsendMessage(mandar);
         } catch (Exception e) {
-            System.out.println("Couldn't send the DELETE message. Skipping...");
+            System.out.println("Couldn't send the REMOVED message. Skipping...");
             return false;
         }
         this.info_io.saveFileInfo();
@@ -515,7 +519,7 @@ public class Server {
             {
                 this.info.get(file_id).get(chunk_no).remove(sender_id);
             }
-            //TODO verificar se o count de replicação esta direito, valor dentro do ficheiro. Se não mandar putchunk do body
+            //TODO: verificar se o count de replicação esta direito, valor dentro do ficheiro. Se não mandar putchunk do body
             this.info_io.saveInfo();
         }
     }
@@ -555,12 +559,12 @@ public class Server {
         this.protocol_version = ver;
     }
 
-    public void setCurrentSize(int new_size)
+    public void setCurrentSize(long new_size)
     {
         this.current_size=new_size;
     }
 
-    public int getCurrentSize()
+    public long getCurrentSize()
     {
         return this.current_size;
     }
