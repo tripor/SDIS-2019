@@ -83,8 +83,8 @@ public class Server {
         try {
             if (this.server_number == 1) {
                 //this.sendDeletemessage("1.1", "./files/client/t.txt");
-                this.sendPutChunkMessage("1.1", "./files/client/cell.jpg", 1);
-                //this.saveFile("./files/client/cell.jpg", this.sendGetChunkMessage("1.1", "./files/client/cell.jpg"));
+                //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
+                this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
             } else {
                 // this.MDB.receive();
             }
@@ -259,7 +259,7 @@ public class Server {
 
     }
 
-    private HashMap<String,HashMap<String,HashMap<String,byte[]>>> chunk_body_string = new HashMap<String,HashMap<String,HashMap<String,byte[]>>>();
+    private HashMap<String,HashMap<String,byte[]>> chunk_body_string = new HashMap<String,HashMap<String,byte[]>>();
 
     public Boolean sendStoredMessage(String version, String sender_id, String file_id, String chunk_no) {
         try {
@@ -318,7 +318,7 @@ public class Server {
         file_id = Message.getSHA(file_id);
         int pos_atual=0;
         try {
-            if (this.chunk_body_string.containsKey(file_id) && this.chunk_body_string.get(file_id).containsKey(version)) {
+            if (this.chunk_body_string.containsKey(file_id)) {
                 System.out.println("Someone is trying to get this file. Please try later.");
                 return null;
             }
@@ -327,24 +327,13 @@ public class Server {
                 System.out.println("Getting chunk number "+i);
                 if(this.chunk_body_string.containsKey(file_id))
                 {
-                    if(this.chunk_body_string.get(file_id).containsKey(version))
-                    {
-                        this.chunk_body_string.get(file_id).get(version).put(Integer.toString(i), null);
-                    }
-                    else
-                    {
-                        HashMap<String,byte[]> version_hash = new HashMap<String,byte[]>();
-                        version_hash.put(Integer.toString(i), null);
-                        this.chunk_body_string.get(file_id).put(version, version_hash);
-                    }
+                    this.chunk_body_string.get(file_id).put(Integer.toString(i), null);
                 }
                 else
                 {
-                    HashMap<String,HashMap<String,byte[]>> file_hash = new HashMap<String,HashMap<String,byte[]>>();
                     HashMap<String,byte[]> version_hash = new HashMap<String,byte[]>();
                     version_hash.put(Integer.toString(i), null);
-                    file_hash.put(version, version_hash);
-                    this.chunk_body_string.put(file_id, file_hash);
+                    this.chunk_body_string.put(file_id, version_hash);
                 }
                 Message mandar = new Message(new String[] { "GETCHUNK", version, Integer.toString(this.server_number),
                         file_id, Integer.toString(i) });
@@ -352,7 +341,7 @@ public class Server {
                 int espera = 1;
                 while (true) {
                     Thread.sleep(espera * 1000);
-                    if (this.chunk_body_string.get(file_id).get(version).get(Integer.toString(i)) == null) {
+                    if (this.chunk_body_string.get(file_id).get(Integer.toString(i)) == null) {
                         System.out.println("Resending the GETCHUNK message");
                         this.MCsendMessage(mandar);
                     }
@@ -366,8 +355,8 @@ public class Server {
                         return null;
                     }
                 }
-                System.arraycopy(this.chunk_body_string.get(file_id).get(version).get(Integer.toString(i)), 0, devolver, pos_atual, this.chunk_body_string.get(file_id).get(version).get(Integer.toString(i)).length);
-                pos_atual+=this.chunk_body_string.get(file_id).get(version).get(Integer.toString(i)).length;
+                System.arraycopy(this.chunk_body_string.get(file_id).get(Integer.toString(i)), 0, devolver, pos_atual, this.chunk_body_string.get(file_id).get(Integer.toString(i)).length);
+                pos_atual+=this.chunk_body_string.get(file_id).get(Integer.toString(i)).length;
             }
 
         } catch (Exception e) {
@@ -561,9 +550,9 @@ public class Server {
         String sender_id = mensagem[2];
         String file_id = mensagem[3];
         String chunk_no = mensagem[4];
-        if(this.chunk_body_string.containsKey(file_id) && this.chunk_body_string.get(file_id).containsKey(version) && this.chunk_body_string.get(file_id).get(version).containsKey(chunk_no))
+        if(this.chunk_body_string.containsKey(file_id) && this.chunk_body_string.get(file_id).containsKey(chunk_no))
         {
-            this.chunk_body_string.get(file_id).get(version).put(chunk_no, body);
+            this.chunk_body_string.get(file_id).put(chunk_no, body);
         }
 
 
