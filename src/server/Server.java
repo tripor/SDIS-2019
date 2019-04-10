@@ -83,8 +83,8 @@ public class Server {
         try {
             if (this.server_number.equals("1")) {
                 //this.sendDeletemessage("1.1", "./files/client/t.txt");
-                this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
-                //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
+                //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
+                this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
             } else {
                 // this.MDB.receive();
             }
@@ -184,7 +184,7 @@ public class Server {
             i*=2;
         }
 
-        this.confirmation.clear();
+        this.confirmation.remove(Message.getSHA(path));
         this.files_info.put(path, new Integer(divisoes));
         this.info_io.saveFileInfo();
 
@@ -212,10 +212,8 @@ public class Server {
      * É chamada quando um packet é recebido no MDB channel. Informação sobre a
      * mensagem esta guardada em this.MDB.getMessage() e this.MDB.getBody().trim()
      */
-    public void MDBmessageReceived() {
+    public void MDBmessageReceived(String[] mensagem,byte[] body) {
         System.out.println("Received a multicast data channel message");
-        String[] mensagem = this.MDB.getMessage();
-        byte[] body = this.MDB.getBody();
         String version = mensagem[1];
         //String sender_id = mensagem[2];
         String file_id = mensagem[3];
@@ -303,6 +301,8 @@ public class Server {
             }
         }
         try {
+            save_file.delete();
+            save_file.createNewFile();
             FileOutputStream fos = new FileOutputStream(path_save+name);
             fos.write(body);
             fos.close();
@@ -331,9 +331,8 @@ public class Server {
                 System.out.println("Someone is trying to get this file. Please try later.");
                 return null;
             }
-
-            for (int i = 0; i < number_of_chunks; i++) {
-                System.out.println("Getting chunk number "+i);
+            for (int i = 0; i < number_of_chunks; i++)
+            {
                 if(this.chunk_body_string.containsKey(file_id))
                 {
                     this.chunk_body_string.get(file_id).put(Integer.toString(i), null);
@@ -344,26 +343,31 @@ public class Server {
                     version_hash.put(Integer.toString(i), null);
                     this.chunk_body_string.put(file_id, version_hash);
                 }
-                Message mandar = new Message(new String[] { "GETCHUNK", version,this.server_number,
-                        file_id, Integer.toString(i) });
-                this.MCsendMessage(mandar);
+            }
+            int waiting_number_chunks=0;
+            while(waiting_number_chunks<number_of_chunks)
+            {
                 int espera = 1;
-                while (true) {
-                    Thread.sleep(espera * 1000);
-                    if (this.chunk_body_string.get(file_id).get(Integer.toString(i)) == null) {
-                        System.out.println("Resending the GETCHUNK message");
-                        this.MCsendMessage(mandar);
-                    }
-                    else
+                for (int i = 0; i < number_of_chunks; i++) {
+                    if(this.chunk_body_string.get(file_id).get(Integer.toString(i)) != null)
                     {
-                        break;
+                        waiting_number_chunks++;
+                        continue;
                     }
-                    espera++;
-                    if (espera == 6) {
-                        System.out.println("Couldn't send the GETCHUNK message. Skipping");
-                        return null;
-                    }
+                    System.out.println("Getting chunk number "+i);
+                    Message mandar = new Message(new String[]{ "GETCHUNK", version,this.server_number,
+                            file_id, Integer.toString(i) });
+                    this.MCsendMessage(mandar);
                 }
+                Thread.sleep(espera * 1000);
+                espera*=2;
+                if (espera == 32) {
+                    System.out.println("Couldn't send the GETCHUNK message. Skipping");
+                    return null;
+                }
+            }
+            for (int i = 0; i < number_of_chunks; i++)
+            {
                 System.arraycopy(this.chunk_body_string.get(file_id).get(Integer.toString(i)), 0, devolver, pos_atual, this.chunk_body_string.get(file_id).get(Integer.toString(i)).length);
                 pos_atual+=this.chunk_body_string.get(file_id).get(Integer.toString(i)).length;
             }
@@ -372,6 +376,7 @@ public class Server {
             e.printStackTrace();
             return null;
         }
+        this.chunk_body_string.remove(file_id);
         return devolver;
 
     }
@@ -437,9 +442,8 @@ public class Server {
      * Função chamada quando é recebida um packet no MC channel. Informação em
      * this.MC.getMessage()
      */
-    public void MCmessageReceived() {
+    public void MCmessageReceived(String[] mensagem,byte[] body) {
         System.out.println("Received a multicast control channel message");
-        String[] mensagem = this.MC.getMessage();
 
         if (mensagem[0].equals("STORED")) {
             String version = mensagem[1];
@@ -463,12 +467,12 @@ public class Server {
             if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(chunk_no)) {
                 
                 String file_path="./files/server/"+this.server_number+"/backup/"+file_id+"/"+chunk_no;
-                byte[] body= this.readAnyFile(file_path);
+                byte[] body2= this.readAnyFile(file_path);
 
                 try {
                     Message message = new Message(new String[]{"CHUNK",version,this.server_number,file_id,chunk_no});
                     this.waitRandom();
-                    this.sendChunkMessage(message, body);
+                    this.sendChunkMessage(message, body2);
 
                 } catch (Exception e) {
                     System.out.println("Message with wrong format");
@@ -494,11 +498,6 @@ public class Server {
                         chunks.delete();
                     }
                     dir.delete();
-                }
-                for(String chunks:this.info.get(file_id).keySet())
-                {
-                    this.waitRandom();
-                    this.sendRemovedMessage(version, file_id, chunks);
                 }
                 this.info.remove(file_id);
                 String path2="./files/server/"+this.server_number+"/backup/"+file_id;
@@ -535,10 +534,8 @@ public class Server {
 
     }
 
-    public void MDRmessageReceived() {
+    public void MDRmessageReceived(String[] mensagem,byte[] body) {
         System.out.println("Received a multicast data recovery channel message");
-        String[] mensagem = this.MDR.getMessage();
-        byte[] body = this.MDR.getBody();
         String version = mensagem[1];
         String sender_id = mensagem[2];
         String file_id = mensagem[3];

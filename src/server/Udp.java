@@ -139,7 +139,7 @@ public class Udp implements Runnable {
 
             }
             ExecutorService service =  Executors.newSingleThreadExecutor();
-            Task task = new Task(this.socket_name,receber,this);
+            Task task = new Task(this.socket_name,receber);
             Future<Integer> future = service.submit(task);
 
         }
@@ -150,11 +150,9 @@ public class Udp implements Runnable {
 class Task implements Callable<Integer> {
     private String socket_name;
     private DatagramPacket receber;
-    private Udp canal;
         
-    public Task(String socket,DatagramPacket receber,Udp canal)
+    public Task(String socket,DatagramPacket receber)
     {
-        this.canal=canal;
         this.socket_name=socket;
         this.receber=receber;
     }
@@ -170,9 +168,6 @@ class Task implements Callable<Integer> {
         System.arraycopy(receber.getData(), splited[0].length() + 4, body_receber, 0,
                 receber.getLength() - (splited[0].length() + 4));
 
-        this.canal.setMessage(message_splited);
-        this.canal.setBody(body_receber);
-
         Message test;
         try {
             test = new Message(message_splited);
@@ -184,11 +179,11 @@ class Task implements Callable<Integer> {
             return 0;
         }
         if (this.socket_name.equals("MDB")) {
-            Server.singleton.MDBmessageReceived();
+            Server.singleton.MDBmessageReceived(message_splited,body_receber);
         } else if (this.socket_name.equals("MC")) {
-            Server.singleton.MCmessageReceived();
+            Server.singleton.MCmessageReceived(message_splited,body_receber);
         } else if (this.socket_name.equals("MDR")) {
-            Server.singleton.MDRmessageReceived();
+            Server.singleton.MDRmessageReceived(message_splited,body_receber);
         }
 		return 1;
 	}
