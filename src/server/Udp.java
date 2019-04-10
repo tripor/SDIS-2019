@@ -9,8 +9,6 @@ import java.util.concurrent.Future;
 
 public class Udp implements Runnable {
 
-    private Server belong;
-
     private Thread udp_thread;
 
     private InetAddress group;
@@ -36,8 +34,7 @@ public class Udp implements Runnable {
      * @param address The ip address of the connection
      * @param port    The port of the connection
      */
-    public Udp(String address, int port, Server server, String type) {
-        this.belong = server;
+    public Udp(String address, int port, String type) {
         this.address_name = address;
         this.socket_name = type;
         try {
@@ -157,7 +154,7 @@ public class Udp implements Runnable {
             }
             
             ExecutorService service =  Executors.newSingleThreadExecutor();
-            Task task = new Task(this.socket_name,this.belong);
+            Task task = new Task(this.socket_name);
             Future<Integer> future = service.submit(task);
 
         }
@@ -167,21 +164,19 @@ public class Udp implements Runnable {
 
 class Task implements Callable<Integer> {
     private String socket_name;
-    private Server belong;
         
-    public Task(String socket,Server belong)
+    public Task(String socket)
     {
         this.socket_name=socket;
-        this.belong=belong;
     }
 	@Override
 	public Integer call() throws Exception {
         if (this.socket_name.equals("MDB")) {
-            this.belong.MDBmessageReceived();
+            Server.singleton.MDBmessageReceived();
         } else if (this.socket_name.equals("MC")) {
-            this.belong.MCmessageReceived();
+            Server.singleton.MCmessageReceived();
         } else if (this.socket_name.equals("MDR")) {
-            this.belong.MDRmessageReceived();
+            Server.singleton.MDRmessageReceived();
         }
 		return 1;
 	}

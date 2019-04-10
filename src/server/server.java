@@ -11,6 +11,8 @@ import java.util.Random;
 
 public class Server {
 
+    public static Server singleton;
+
     private int server_number;
     private String protocol_version;
 
@@ -19,11 +21,14 @@ public class Server {
     private Udp MDR;
 
     private int max_number_of_chunks=100;
-    private int number_of_chunks=0;
+    private int current_size=0;
 
     // Fileid chunkNo rep degree
-    private HashMap<String, HashMap<String, ArrayList<String>>> info = new HashMap<String, HashMap<String, ArrayList<String>>>();
-    private HashMap<String, Integer> files_info = new HashMap<String, Integer>();
+    private Info info_io;
+
+    public HashMap<String, HashMap<String, ArrayList<String>>> info = new HashMap<String, HashMap<String, ArrayList<String>>>();
+    public HashMap<String, Integer> files_info = new HashMap<String, Integer>();
+    public HashMap<String, HashMap<String, ArrayList<String>>> confirmation = new HashMap<String, HashMap<String, ArrayList<String>>>();
 
     public static void main(String[] args) {
         if (args.length != 5) { //TODO inputs dos arguments vao ainda ser diferentes +info em section 3
@@ -31,18 +36,18 @@ public class Server {
                     "\nNo arguments provided. Use make server arguments=\"<protocol version> <server id> <access point> <IP address> <port number>\"\n");
             System.exit(1);
         }
-        Server server = new Server(args[3], Integer.parseInt(args[4]));
-        server.setServerNumber(Integer.parseInt(args[1]));
-        server.setProtocolVersion(args[0]);
-        server.readInfo();
-        server.readFileInfo();
+        Server server = new Server(args[0],Integer.parseInt(args[1]),args[3], Integer.parseInt(args[4]));
         server.run(args[2]);
     }
 
-    public Server(String address, int port) {
-        this.MDB = new Udp(address, port, this, "MDB");
-        this.MC = new Udp(address, port + 1, this, "MC");
-        this.MDR = new Udp(address, port + 2, this, "MDR");
+    public Server(String version,int server_number, String address, int port) {
+        Server.singleton=this;
+        this.server_number=server_number;
+        this.protocol_version=version;
+        this.info_io= new Info();
+        this.MDB = new Udp(address, port, "MDB");
+        this.MC = new Udp(address, port + 1, "MC");
+        this.MDR = new Udp(address, port + 2, "MDR");
     }
 
     /**
@@ -77,8 +82,8 @@ public class Server {
         
         try {
             if (this.server_number == 1) {
-                this.sendDeletemessage("1.1", "./files/client/t.txt");
-                //this.sendPutChunkMessage("1.1", "./files/client/cell.jpg", 1);
+                //this.sendDeletemessage("1.1", "./files/client/t.txt");
+                this.sendPutChunkMessage("1.1", "./files/client/cell.jpg", 1);
                 //this.saveFile("./files/client/cell.jpg", this.sendGetChunkMessage("1.1", "./files/client/cell.jpg"));
             } else {
                 // this.MDB.receive();
@@ -91,226 +96,9 @@ public class Server {
 
     }
 
-    private Boolean usingInfo = false;
-
-    /**
-     * Guarda informação sobre os ficheiro que já guardou, as versoes dos ficheiros
-     * e que peers tem os chunk guardados(incluindo ele proprio)
-     */
-    public synchronized void saveInfo() {
-        while (usingInfo) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                System.out.println("Thread interrupted");
-                Thread.currentThread().interrupt();
-            }
-        }
-        this.usingInfo = true;
-        String path = "./files/server/" + this.server_number + "/";
-        String file_path = path + "info.txt";
-        File directory = new File(path);
-        if (!directory.exists())
-            directory.mkdirs();
-        File save_file = new File(file_path);
-        if (!save_file.exists()) {
-            try {
-                save_file.createNewFile();
-
-            } catch (IOException e) {
-                System.out.println("Couldn't create file to write. Skipping...");
-                this.usingInfo = false;
-                notify();
-                return;
-            }
-        }
-
-        try {
-            BufferedWriter bw = new BufferedWriter(new FileWriter(file_path));
-            bw.write("");
-            bw.write(this.info.size() + "\n");
-            // File id
-            for (String i : this.info.keySet()) {
-                bw.write(i + "\n");
-                bw.write(this.info.get(i).size() + "\n");
-                // version
-                for (String j : this.info.get(i).keySet()) {
-                    bw.write(j + "\n");
-                    // rep
-                    bw.write(this.info.get(i).get(j).size() + "\n");
-                    for (int l = 0; l < this.info.get(i).get(j).size(); l++) {
-                        bw.write(this.info.get(i).get(j).get(l) + "\n");
-                    }
-                }
-            }
-            bw.close();
-
-        } catch (IOException e) {
-            System.out.println("Couldn\'t write to the info file. Skipping...");
-            save_file.delete();
-        }
-
-        this.usingInfo = false;
-        notify();
-    }
-
-    private Boolean usingFileInfo = false;
-
-    /**
-     * Guarda informação sobre os ficheiro que mandou guardar aos peers. Serve para
-     * saber quanto os chunks feitos por cada ficheiro
-     */
-    public synchronized void saveFileInfo() {
-        while (usingFileInfo) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                System.out.println("Thread interrupted");
-                Thread.currentThread().interrupt();
-            }
-        }
-        this.usingFileInfo = true;
-        String path = "./files/server/" + this.server_number + "/";
-        String file_path = path + "file_info.txt";
-        File directory = new File(path);
-        if (!directory.exists())
-            directory.mkdirs();
-        File save_file = new File(file_path);
-        if (!save_file.exists()) {
-            try {
-                save_file.createNewFile();
-
-            } catch (IOException e) {
-                System.out.println("Couldn't create file to write. Skipping...");
-                this.usingFileInfo = false;
-                notifyAll();
-                return;
-            }
-        }
-
-        try {
-            BufferedWriter bw = new BufferedWriter(new FileWriter(file_path));
-            bw.write("");
-            bw.write(this.files_info.size() + "\n");
-            // File id
-            for (String i : this.files_info.keySet()) {
-                bw.write(i + "\n");
-                bw.write(this.files_info.get(i) + "\n");
-            }
-            bw.close();
-
-        } catch (IOException e) {
-            System.out.println("Couldn\'t write to the info file. Skipping...");
-            save_file.delete();
-        }
-
-        this.usingFileInfo = false;
-        notifyAll();
-    }
-
-    /**
-     * Lê a informação guardada sobre os ficheiro que já guardou, as versoes dos
-     * ficheiros e que peers tem os chunk guardados(incluindo ele proprio)
-     */
-    public void readInfo() {
-        String path = "./files/server/" + this.server_number + "/";
-        String file_path = path + "info.txt";
-        File directory = new File(path);
-        if (!directory.exists())
-            directory.mkdirs();
-        File save_file = new File(file_path);
-        if (!save_file.exists()) {
-            try {
-                save_file.createNewFile();
-                BufferedWriter bw = new BufferedWriter(new FileWriter(file_path));
-                bw.write("0");
-                bw.close();
-
-            } catch (IOException e) {
-                System.out.println("Couldn't create file to write. Skipping...");
-                return;
-            }
-        } else {
-            try {
-                String line;
-                FileReader fileReader = new FileReader(file_path);
-                BufferedReader bufferedReader = new BufferedReader(fileReader);
-                line = bufferedReader.readLine();
-                int info_size = Integer.parseInt(line);
-                this.info.clear();
-                for (int i = 0; i < info_size; i++) {
-                    String file_id = bufferedReader.readLine();
-                    int chunk_no_size = Integer.parseInt(bufferedReader.readLine());
-                    HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
-                    for (int j = 0; j < chunk_no_size; j++) {
-                        String chunk_no_st = bufferedReader.readLine();
-                        int rep = Integer.parseInt(bufferedReader.readLine());
-                        ArrayList<String> senders = new ArrayList<String>();
-                        for (int t = 0; t < rep; t++) {
-                            String senderID = bufferedReader.readLine();
-                            if(senderID.equals(Integer.toString(server_number)))this.number_of_chunks++;
-                            senders.add(senderID);
-                        }
-                        chunk_no_hash.put(chunk_no_st, senders);
-                    }
-                    this.info.put(file_id, chunk_no_hash);
-                }
-                bufferedReader.close();
-            } catch (IOException e) {
-                System.out.println("Couldn\'t write to the info file. Skipping...");
-                save_file.delete();
-            }
-        }
-    }
-
-    /**
-     * Lê a informação sobre os ficheiro que mandou guardar aos peers. Serve para
-     * saber quanto os chunks feitos por cada ficheiro
-     */
-    public void readFileInfo() {
-        String path = "./files/server/" + this.server_number + "/";
-        String file_path = path + "file_info.txt";
-        File directory = new File(path);
-        if (!directory.exists())
-            directory.mkdirs();
-        File save_file = new File(file_path);
-        if (!save_file.exists()) {
-            try {
-                save_file.createNewFile();
-                BufferedWriter bw = new BufferedWriter(new FileWriter(file_path));
-                bw.write("0");
-                bw.close();
-
-            } catch (IOException e) {
-                System.out.println("Couldn't create file to write. Skipping...");
-                return;
-            }
-        } else {
-            try {
-                String line;
-                FileReader fileReader = new FileReader(file_path);
-                BufferedReader bufferedReader = new BufferedReader(fileReader);
-                line = bufferedReader.readLine();
-                int info_size = Integer.parseInt(line);
-                this.files_info.clear();
-                for (int i = 0; i < info_size; i++) {
-                    String file_id = bufferedReader.readLine();
-                    int chunk_no_size = Integer.parseInt(bufferedReader.readLine());
-                    this.files_info.put(file_id, chunk_no_size);
-                }
-                bufferedReader.close();
-            } catch (IOException e) {
-                System.out.println("Couldn\'t write to the info file. Skipping...");
-                save_file.delete();
-            }
-        }
-    }
-
-    private HashMap<String, HashMap<String, ArrayList<String>>> confirmation = new HashMap<String, HashMap<String, ArrayList<String>>>();
-
     /**
      * Guarda um ficheiro cuja localização esta em path
-     * 
+     *  
      * @param version Versão que o ficheiro tem e que quero com que seja guardada
      * @param path    Path onde se encontra guardado o ficheiro
      * @param rep_deg Degree de replicação que eu quero se seja atingido
@@ -381,7 +169,7 @@ public class Server {
         }
         this.confirmation.clear();
         this.files_info.put(path, new Integer(divisoes));
-        this.saveFileInfo();
+        this.info_io.saveFileInfo();
 
     }
 
@@ -456,7 +244,7 @@ public class Server {
             //Com enhancement:Acho que a approuch indicada aqui seria fazer um delete deste file e de seguida fazer um novo putchunk dele
             //Sem enhancement: Criar um segundo file com o mesmo nome +(x) como se fosse uma outra copia daquele ficheiro
         }
-        this.saveInfo(); // TODO: tal como o todo anterior aqui está a dar overwrite ao mesmo chunk que já lá tinha, o que kinda faz parte do enhancement
+        this.info_io.saveInfo(); // TODO: tal como o todo anterior aqui está a dar overwrite ao mesmo chunk que já lá tinha, o que kinda faz parte do enhancement
         this.tooMuchChunks();
         try {
             Random rand = new Random();
@@ -502,8 +290,6 @@ public class Server {
 
             } catch (IOException e) {
                 System.out.println("Couldn't create file to write. Skipping...");
-                this.usingFileInfo = false;
-                notifyAll();
                 return;
             }
         }
@@ -613,7 +399,7 @@ public class Server {
             System.out.println("Couldn't send the DELETE message. Skipping...");
             return false;
         }
-        this.saveFileInfo();
+        this.info_io.saveFileInfo();
         return true;
 
     }
@@ -627,7 +413,7 @@ public class Server {
             System.out.println("Couldn't send the DELETE message. Skipping...");
             return false;
         }
-        this.saveFileInfo();
+        this.info_io.saveFileInfo();
         return true;
 
     }
@@ -670,7 +456,7 @@ public class Server {
                 if (!this.info.get(file_id).get(chunk_no).contains(sender_id))
                     this.info.get(file_id).get(chunk_no).add(sender_id);
             }
-            this.saveInfo();
+            this.info_io.saveInfo();
         } else if (mensagem[0].equals("GETCHUNK")) {
             String version = mensagem[1];
             String sender_id = mensagem[2];
@@ -737,7 +523,7 @@ public class Server {
                 File dir2= new File(path2);
                 dir2.delete();
             }
-            this.saveInfo();
+            this.info_io.saveInfo();
         }
         else if (mensagem[0].equals("REMOVED"))
         {
@@ -750,7 +536,7 @@ public class Server {
                 this.info.get(file_id).get(chunk_no).remove(sender_id);
             }
             //TODO verificar se o count de replicação esta direito, valor dentro do ficheiro. Se não mandar putchunk do body
-            this.saveInfo();
+            this.info_io.saveInfo();
         }
     }
 
@@ -791,6 +577,16 @@ public class Server {
         this.protocol_version = ver;
     }
 
+    public void setCurrentSize(int new_size)
+    {
+        this.current_size=new_size;
+    }
+
+    public int getCurrentSize()
+    {
+        return this.current_size;
+    }
+
     public String getVersion() {
         return this.protocol_version;
     }
@@ -820,4 +616,5 @@ public class Server {
             return null;
         }
     }
+
 }
