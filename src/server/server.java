@@ -336,6 +336,7 @@ public class Server {
         byte[] body_completo = this.readAnyFile(path);
         if(body_completo==null)return;
         int divisoes = body_completo.length / 64000;
+        //Varios chunks
         if (divisoes != 0) {
             if (body_completo.length % 64000 != 0)
                 divisoes++;
@@ -377,12 +378,11 @@ public class Server {
                     version_hash.put(version, chunk_no_hash);
                     this.confirmation.put(mensagem.getFileId(), version_hash);
                 }
-                int i = 0;
+                int i = 1;
                 while (this.confirmation.get(mensagem.getFileId()).get(version).get(chunk_no_j).size() < rep_deg) { //todo -1? visto que o proprio server que tem o ficheiro tb conta para o rep degree
-                    if (i != 0 && i != 6)
+                    if (i != 1 && i != 16)
                         System.out.println("Peers didn't respond on time. Retrying...");
-                    i++;
-                    if (i == 6) {
+                    if (i == 16) {
                         System.out.println("Message couldn't be saved on servers");
                         return;
                     }
@@ -395,10 +395,11 @@ public class Server {
                         System.out.println("Thread was interrupted.");
                         Thread.currentThread().interrupt();
                     }
+                    i*=2;
                 }
             }
 
-        } else {
+        } else { // Só um chunk
             divisoes++;
             Message mensagem = null;
             try {
@@ -425,12 +426,11 @@ public class Server {
                 version_hash.put(version, chunk_no_hash);
                 this.confirmation.put(mensagem.getFileId(), version_hash);
             }
-            int i = 0;
+            int i = 1;
             while (this.confirmation.get(mensagem.getFileId()).get(version).get("0").size() < rep_deg) { //todo -1?
-                if (i != 0 && i != 6)
+                if (i != 1 && i != 16)
                     System.out.println("Peers didn't respond on time. Retrying...");
-                i++;
-                if (i == 6) {
+                if (i == 16) {
                     System.out.println("Message couldn't be saved on servers");
                     return;
                 }
@@ -443,6 +443,7 @@ public class Server {
                     System.out.println("Thread was interrupted.");
                     Thread.currentThread().interrupt();
                 }
+                i*=2;
             }
         }
         this.confirmation.clear();
