@@ -21,7 +21,7 @@ public class Server {
     private int max_number_of_chunks=100;
     private int number_of_chunks=0;
 
-    // Fileid Version chunkNo rep degree
+    // Fileid chunkNo rep degree
     private HashMap<String, HashMap<String, ArrayList<String>>> info = new HashMap<String, HashMap<String, ArrayList<String>>>();
     private HashMap<String, Integer> files_info = new HashMap<String, Integer>();
 
@@ -77,9 +77,9 @@ public class Server {
         
         try {
             if (this.server_number == 1) {
-                //this.sendDeletemessage("1.1", "./files/client/t.txt");
-                //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
-                //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
+                this.sendDeletemessage("1.1", "./files/client/t.txt");
+                //this.sendPutChunkMessage("1.1", "./files/client/cell.jpg", 1);
+                //this.saveFile("./files/client/cell.jpg", this.sendGetChunkMessage("1.1", "./files/client/cell.jpg"));
             } else {
                 // this.MDB.receive();
             }
@@ -319,67 +319,33 @@ public class Server {
         byte[] body_completo = this.readAnyFile(path);
         if(body_completo==null)return;
         int divisoes = body_completo.length / 64000;
-        //Varios chunks
-        if (divisoes != 0) {
+
+        if(divisoes!=0)
+        {
             if (body_completo.length % 64000 != 0)
                 divisoes++;
-            int inicio, fim;
-            inicio = 0;
-            fim = 63999;
-            for (int j = 0; j < divisoes; j++) {
-                System.out.println("Sending chunk number " + j);
-                String chunk_no_j = Integer.toString(j);
-                if (fim > body_completo.length-1)
-                    fim = body_completo.length-1;
-                byte[] mandar= new byte[fim-inicio+1];
-                System.arraycopy(body_completo, inicio, mandar, 0, fim-inicio+1);
-                inicio += 64000;
-                fim += 64000;
-
-                Message mensagem = null;
-                try {
-                    mensagem = new Message(new String[] { "PUTCHUNK", version, Integer.toString(this.server_number),
-                            path, chunk_no_j, Integer.toString(rep_deg) });
-                    mensagem.hashFileId();
-                } catch (Exception e) {
-                    System.out.println("Message format wrong");
-                    return;
-                }
-                ArrayList<String> nada = new ArrayList<String>();
-                if (this.confirmation.containsKey(mensagem.getFileId())) {
-                    this.confirmation.get(mensagem.getFileId()).put(chunk_no_j, nada);
-                } else {
-                    HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
-                    chunk_no_hash.put(chunk_no_j, nada);
-                    this.confirmation.put(mensagem.getFileId(), chunk_no_hash);
-                }
-                int i = 1;
-                while (this.confirmation.get(mensagem.getFileId()).get(chunk_no_j).size() < rep_deg) { //todo -1? visto que o proprio server que tem o ficheiro tb conta para o rep degree
-                    if (i != 1 && i != 32)
-                        System.out.println("Peers didn't respond on time. Retrying...");
-                    if (i == 32) {
-                        System.out.println("Message couldn't be saved on servers");
-                        return;
-                    }
-                    System.out.println("Trying to save file.");
-                    this.MDBsendMessage(mensagem, mandar);
-                    try {
-                        Thread.sleep(i * 1000);
-
-                    } catch (InterruptedException e) {
-                        System.out.println("Thread was interrupted.");
-                        Thread.currentThread().interrupt();
-                    }
-                    i*=2;
-                }
-            }
-
-        } else { // Só um chunk
+        }
+        else
+        {
             divisoes++;
+        }
+        int inicio, fim;
+        inicio = 0;
+        fim = 63999;
+        for (int j = 0; j < divisoes; j++) {
+            System.out.println("Sending chunk number " + j);
+            String chunk_no_j = Integer.toString(j);
+            if (fim > body_completo.length-1)
+                fim = body_completo.length-1;
+            byte[] mandar= new byte[fim-inicio+1];
+            System.arraycopy(body_completo, inicio, mandar, 0, fim-inicio+1);
+            inicio += 64000;
+            fim += 64000;
+
             Message mensagem = null;
             try {
-                mensagem = new Message(new String[] { "PUTCHUNK", version, Integer.toString(this.server_number), path,
-                        "0", Integer.toString(rep_deg) });
+                mensagem = new Message(new String[] { "PUTCHUNK", version, Integer.toString(this.server_number),
+                        path, chunk_no_j, Integer.toString(rep_deg) });
                 mensagem.hashFileId();
             } catch (Exception e) {
                 System.out.println("Message format wrong");
@@ -387,22 +353,22 @@ public class Server {
             }
             ArrayList<String> nada = new ArrayList<String>();
             if (this.confirmation.containsKey(mensagem.getFileId())) {
-                this.confirmation.get(mensagem.getFileId()).put("0", nada);
+                this.confirmation.get(mensagem.getFileId()).put(chunk_no_j, nada);
             } else {
                 HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
-                chunk_no_hash.put("0", nada);
+                chunk_no_hash.put(chunk_no_j, nada);
                 this.confirmation.put(mensagem.getFileId(), chunk_no_hash);
             }
             int i = 1;
-            while (this.confirmation.get(mensagem.getFileId()).get("0").size() < rep_deg) { //todo -1?
-                if (i != 1 && i != 16)
+            while (this.confirmation.get(mensagem.getFileId()).get(chunk_no_j).size() < rep_deg) { //todo -1? visto que o proprio server que tem o ficheiro tb conta para o rep degree
+                if (i != 1 && i != 32)
                     System.out.println("Peers didn't respond on time. Retrying...");
-                if (i == 16) {
+                if (i == 32) {
                     System.out.println("Message couldn't be saved on servers");
                     return;
                 }
                 System.out.println("Trying to save file.");
-                this.MDBsendMessage(mensagem, body_completo);
+                this.MDBsendMessage(mensagem, mandar);
                 try {
                     Thread.sleep(i * 1000);
 
