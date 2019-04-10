@@ -83,8 +83,8 @@ public class Server {
         try {
             if (this.server_number.equals("1")) {
                 //this.sendDeletemessage("1.1", "./files/client/t.txt");
-                //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
-                this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
+                this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
+                //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
             } else {
                 // this.MDB.receive();
             }
@@ -166,7 +166,6 @@ public class Server {
                 {
                     System.out.println("Sending chunk number " + j);
                     this.MDBsendMessage(mensagem, guardar[j]);
-                    this.waitAmount(100);
                 }
                 else
                 {
