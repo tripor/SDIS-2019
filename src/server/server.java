@@ -22,8 +22,8 @@ public class Server {
     private int number_of_chunks=0;
 
     // Fileid Version chunkNo rep degree
-    private HashMap<String, HashMap<String, HashMap<String, ArrayList<String>>>> info = new HashMap<String, HashMap<String, HashMap<String, ArrayList<String>>>>();
-    private HashMap<String, HashMap<String, Integer>> files_info = new HashMap<String, HashMap<String, Integer>>();
+    private HashMap<String, HashMap<String, ArrayList<String>>> info = new HashMap<String, HashMap<String, ArrayList<String>>>();
+    private HashMap<String, Integer> files_info = new HashMap<String, Integer>();
 
     public static void main(String[] args) {
         if (args.length != 5) { //TODO inputs dos arguments vao ainda ser diferentes +info em section 3
@@ -50,11 +50,16 @@ public class Server {
      */
     public void run(String access_point) {
         // Create the server local storage directory
-        String path = "./files/server/" + this.server_number + "/save/";
+        String path = "./files/server/" + this.server_number + "/backup/";
         File directory = new File(path);
         if (!directory.exists())
             directory.mkdirs();
-        
+            
+        String path2 = "./files/server/" + this.server_number + "/restored/";
+        File directory2 = new File(path2);
+        if (!directory2.exists())
+            directory2.mkdirs();
+        /*
         try {
             DBS obj = new DBS(this);
             ClientInterface stub = (ClientInterface) UnicastRemoteObject.exportObject(obj, 0);
@@ -67,13 +72,13 @@ public class Server {
         } catch (Exception e) {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
-        }
+        }*/
         
-        /*
+        
         try {
             if (this.server_number == 1) {
                 //this.sendDeletemessage("1.1", "./files/client/t.txt");
-                this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
+                //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
                 //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
             } else {
                 // this.MDB.receive();
@@ -82,7 +87,7 @@ public class Server {
         } catch (Exception e) {
             System.out.println("Message format wrong");
             //System.exit(3);
-        }*/
+        }
 
     }
 
@@ -131,15 +136,10 @@ public class Server {
                 // version
                 for (String j : this.info.get(i).keySet()) {
                     bw.write(j + "\n");
+                    // rep
                     bw.write(this.info.get(i).get(j).size() + "\n");
-                    // chunk no
-                    for (String k : this.info.get(i).get(j).keySet()) {
-                        bw.write(k + "\n");
-                        // rep
-                        bw.write(this.info.get(i).get(j).get(k).size() + "\n");
-                        for (int l = 0; l < this.info.get(i).get(j).get(k).size(); l++) {
-                            bw.write(this.info.get(i).get(j).get(k).get(l) + "\n");
-                        }
+                    for (int l = 0; l < this.info.get(i).get(j).size(); l++) {
+                        bw.write(this.info.get(i).get(j).get(l) + "\n");
                     }
                 }
             }
@@ -195,12 +195,7 @@ public class Server {
             // File id
             for (String i : this.files_info.keySet()) {
                 bw.write(i + "\n");
-                bw.write(this.files_info.get(i).size() + "\n");
-                // version
-                for (String j : this.files_info.get(i).keySet()) {
-                    bw.write(j + "\n");
-                    bw.write(this.files_info.get(i).get(j) + "\n");
-                }
+                bw.write(this.files_info.get(i) + "\n");
             }
             bw.close();
 
@@ -245,26 +240,20 @@ public class Server {
                 this.info.clear();
                 for (int i = 0; i < info_size; i++) {
                     String file_id = bufferedReader.readLine();
-                    int version_size = Integer.parseInt(bufferedReader.readLine());
-                    HashMap<String, HashMap<String, ArrayList<String>>> version_hash = new HashMap<String, HashMap<String, ArrayList<String>>>();
-                    for (int j = 0; j < version_size; j++) {
-                        String version_st = bufferedReader.readLine();
-                        int chunk_no_size = Integer.parseInt(bufferedReader.readLine());
-                        HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
-                        for (int k = 0; k < chunk_no_size; k++) {
-                            String chunk_no_st = bufferedReader.readLine();
-                            int rep = Integer.parseInt(bufferedReader.readLine());
-                            ArrayList<String> senders = new ArrayList<String>();
-                            for (int t = 0; t < rep; t++) {
-                                String senderID = bufferedReader.readLine();
-                                if(senderID.equals(Integer.toString(server_number)))this.number_of_chunks++;
-                                senders.add(senderID);
-                            }
-                            chunk_no_hash.put(chunk_no_st, senders);
+                    int chunk_no_size = Integer.parseInt(bufferedReader.readLine());
+                    HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
+                    for (int j = 0; j < chunk_no_size; j++) {
+                        String chunk_no_st = bufferedReader.readLine();
+                        int rep = Integer.parseInt(bufferedReader.readLine());
+                        ArrayList<String> senders = new ArrayList<String>();
+                        for (int t = 0; t < rep; t++) {
+                            String senderID = bufferedReader.readLine();
+                            if(senderID.equals(Integer.toString(server_number)))this.number_of_chunks++;
+                            senders.add(senderID);
                         }
-                        version_hash.put(version_st, chunk_no_hash);
+                        chunk_no_hash.put(chunk_no_st, senders);
                     }
-                    this.info.put(file_id, version_hash);
+                    this.info.put(file_id, chunk_no_hash);
                 }
                 bufferedReader.close();
             } catch (IOException e) {
@@ -306,14 +295,8 @@ public class Server {
                 this.files_info.clear();
                 for (int i = 0; i < info_size; i++) {
                     String file_id = bufferedReader.readLine();
-                    int version_size = Integer.parseInt(bufferedReader.readLine());
-                    HashMap<String, Integer> version_hash = new HashMap<String, Integer>();
-                    for (int j = 0; j < version_size; j++) {
-                        String version_st = bufferedReader.readLine();
-                        Integer chunk_no_size = Integer.parseInt(bufferedReader.readLine());
-                        version_hash.put(version_st, chunk_no_size);
-                    }
-                    this.files_info.put(file_id, version_hash);
+                    int chunk_no_size = Integer.parseInt(bufferedReader.readLine());
+                    this.files_info.put(file_id, chunk_no_size);
                 }
                 bufferedReader.close();
             } catch (IOException e) {
@@ -323,7 +306,7 @@ public class Server {
         }
     }
 
-    private HashMap<String, HashMap<String, HashMap<String, ArrayList<String>>>> confirmation = new HashMap<String, HashMap<String, HashMap<String, ArrayList<String>>>>();
+    private HashMap<String, HashMap<String, ArrayList<String>>> confirmation = new HashMap<String, HashMap<String, ArrayList<String>>>();
 
     /**
      * Guarda um ficheiro cuja localização esta em path
@@ -364,25 +347,17 @@ public class Server {
                 }
                 ArrayList<String> nada = new ArrayList<String>();
                 if (this.confirmation.containsKey(mensagem.getFileId())) {
-                    if (this.confirmation.get(mensagem.getFileId()).containsKey(version)) {
-                        this.confirmation.get(mensagem.getFileId()).get(version).put(chunk_no_j, nada);
-                    } else {
-                        HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
-                        chunk_no_hash.put(chunk_no_j, nada);
-                        this.confirmation.get(mensagem.getFileId()).put(version, chunk_no_hash);
-                    }
+                    this.confirmation.get(mensagem.getFileId()).put(chunk_no_j, nada);
                 } else {
                     HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
                     chunk_no_hash.put(chunk_no_j, nada);
-                    HashMap<String, HashMap<String, ArrayList<String>>> version_hash = new HashMap<String, HashMap<String, ArrayList<String>>>();
-                    version_hash.put(version, chunk_no_hash);
-                    this.confirmation.put(mensagem.getFileId(), version_hash);
+                    this.confirmation.put(mensagem.getFileId(), chunk_no_hash);
                 }
                 int i = 1;
-                while (this.confirmation.get(mensagem.getFileId()).get(version).get(chunk_no_j).size() < rep_deg) { //todo -1? visto que o proprio server que tem o ficheiro tb conta para o rep degree
-                    if (i != 1 && i != 16)
+                while (this.confirmation.get(mensagem.getFileId()).get(chunk_no_j).size() < rep_deg) { //todo -1? visto que o proprio server que tem o ficheiro tb conta para o rep degree
+                    if (i != 1 && i != 32)
                         System.out.println("Peers didn't respond on time. Retrying...");
-                    if (i == 16) {
+                    if (i == 32) {
                         System.out.println("Message couldn't be saved on servers");
                         return;
                     }
@@ -412,22 +387,14 @@ public class Server {
             }
             ArrayList<String> nada = new ArrayList<String>();
             if (this.confirmation.containsKey(mensagem.getFileId())) {
-                if (this.confirmation.get(mensagem.getFileId()).containsKey(version)) {
-                    this.confirmation.get(mensagem.getFileId()).get(version).put("0", nada);
-                } else {
-                    HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
-                    chunk_no_hash.put("0", nada);
-                    this.confirmation.get(mensagem.getFileId()).put(version, chunk_no_hash);
-                }
+                this.confirmation.get(mensagem.getFileId()).put("0", nada);
             } else {
                 HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
                 chunk_no_hash.put("0", nada);
-                HashMap<String, HashMap<String, ArrayList<String>>> version_hash = new HashMap<String, HashMap<String, ArrayList<String>>>();
-                version_hash.put(version, chunk_no_hash);
-                this.confirmation.put(mensagem.getFileId(), version_hash);
+                this.confirmation.put(mensagem.getFileId(), chunk_no_hash);
             }
             int i = 1;
-            while (this.confirmation.get(mensagem.getFileId()).get(version).get("0").size() < rep_deg) { //todo -1?
+            while (this.confirmation.get(mensagem.getFileId()).get("0").size() < rep_deg) { //todo -1?
                 if (i != 1 && i != 16)
                     System.out.println("Peers didn't respond on time. Retrying...");
                 if (i == 16) {
@@ -447,14 +414,7 @@ public class Server {
             }
         }
         this.confirmation.clear();
-
-        if (this.files_info.containsKey(path)) {
-            this.files_info.get(path).put(version, new Integer(divisoes));
-        } else {
-            HashMap<String, Integer> version_file = new HashMap<String, Integer>();
-            version_file.put(version, new Integer(divisoes));
-            this.files_info.put(path, version_file);
-        }
+        this.files_info.put(path, new Integer(divisoes));
         this.saveFileInfo();
 
     }
@@ -490,7 +450,7 @@ public class Server {
         String file_id = mensagem[3];
         String chunk_no = mensagem[4];
         String rep = mensagem[5];
-        String path = "./files/server/" + this.server_number + "/save/" + file_id + "/" + version + "/";
+        String path = "./files/server/" + this.server_number + "/backup/" + file_id;
         String file_path = path + "/" + chunk_no;
         File directory = new File(path);
         if (!directory.exists())
@@ -518,22 +478,14 @@ public class Server {
                 return;
             }
             if (this.info.containsKey(file_id)) {
-                if (this.info.get(file_id).containsKey(version)) {
-                    this.info.get(file_id).get(version).put(chunk_no, inserir);
-                } else {
-                    HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
-                    chunk_no_hash.put(chunk_no, inserir);
-                    this.info.get(file_id).put(version, chunk_no_hash);
-                }
+                this.info.get(file_id).put(chunk_no, inserir);
             } else {
                 HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
                 chunk_no_hash.put(chunk_no, inserir);
-                HashMap<String, HashMap<String, ArrayList<String>>> version_hash = new HashMap<String, HashMap<String, ArrayList<String>>>();
-                version_hash.put(version, chunk_no_hash);
-                this.info.put(file_id, version_hash);
+                this.info.put(file_id, chunk_no_hash);
             }
         } else {
-            this.info.get(file_id).get(version).put(chunk_no, inserir); //TODO: verificar isto aqui prq isto já implementa enhancement da section 3.2
+            this.info.get(file_id).put(chunk_no, inserir); //TODO: verificar isto aqui prq isto já implementa enhancement da section 3.2
             //alem disso vai ser possivel este chunk já ter informacao, se eu tentar fazer um putchunk do mesmo file 2 vezes
             //Com enhancement:Acho que a approuch indicada aqui seria fazer um delete deste file e de seguida fazer um novo putchunk dele
             //Sem enhancement: Criar um segundo file com o mesmo nome +(x) como se fosse uma outra copia daquele ficheiro
@@ -573,7 +525,7 @@ public class Server {
         File file= new File(path);
         String name = file.getName();
 
-        String path_save="./files/client/save/";
+        String path_save="./files/server/"+ this.server_number+"/restored/";
         File directory = new File(path_save);
         if (!directory.exists())
             directory.mkdirs();
@@ -602,16 +554,15 @@ public class Server {
 
     }
 
-    //TODO que vai fazer com a informaçao do restore? Provavelmente criar um ficheiro com essa info 
     public byte[] sendGetChunkMessage(String version, String file_id) {
         int number_of_chunks;
-        if (this.files_info.containsKey(file_id) && this.files_info.get(file_id).containsKey(version)) {
-            number_of_chunks = this.files_info.get(file_id).get(version).intValue();
+        if (this.files_info.containsKey(file_id)) {
+            number_of_chunks = this.files_info.get(file_id).intValue();
         } else {
             System.out.println("This peer doesn't own this file. (GETCHUNK)");
             return null;
         }
-        byte[] devolver= new byte[this.files_info.get(file_id).get(version)*64000];
+        byte[] devolver= new byte[this.files_info.get(file_id)*64000];
         file_id = Message.getSHA(file_id);
         int pos_atual=0;
         try {
@@ -679,11 +630,9 @@ public class Server {
     public Boolean sendDeletemessage(String version,String file_id)
     {
         //TODO falta apagar o file original não só os chunks dele guardados noutros servers/peers. E talvez o this.info tal como o file info tambem??
-        if(this.files_info.containsKey(file_id) && this.files_info.get(file_id).containsKey(version))
+        if(this.files_info.containsKey(file_id))
         {
-            this.files_info.get(file_id).remove(version);
-            if(this.files_info.get(file_id).size()==0)
-                this.files_info.remove(file_id);
+            this.files_info.remove(file_id);
         }
         else
         {
@@ -748,12 +697,12 @@ public class Server {
             String file_id = mensagem[3];
             String chunk_no = mensagem[4];
             if (this.confirmation.containsKey(file_id)) {
-                if (!this.confirmation.get(file_id).get(version).get(chunk_no).contains(sender_id))
-                    this.confirmation.get(file_id).get(version).get(chunk_no).add(sender_id);
-            } else if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(version)
-                    && this.info.get(file_id).get(version).containsKey(chunk_no)) {
-                if (!this.info.get(file_id).get(version).get(chunk_no).contains(sender_id))
-                    this.info.get(file_id).get(version).get(chunk_no).add(sender_id);
+                if(this.confirmation.get(file_id).containsKey(chunk_no))
+                    if (!this.confirmation.get(file_id).get(chunk_no).contains(sender_id))
+                        this.confirmation.get(file_id).get(chunk_no).add(sender_id);
+            } else if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(chunk_no)) {
+                if (!this.info.get(file_id).get(chunk_no).contains(sender_id))
+                    this.info.get(file_id).get(chunk_no).add(sender_id);
             }
             this.saveInfo();
         } else if (mensagem[0].equals("GETCHUNK")) {
@@ -761,10 +710,9 @@ public class Server {
             String sender_id = mensagem[2];
             String file_id = mensagem[3];
             String chunk_no = mensagem[4];
-            if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(version)
-                    && this.info.get(file_id).get(version).containsKey(chunk_no)) {
+            if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(chunk_no)) {
                 
-                String file_path="./files/server/"+this.server_number+"/save/"+file_id+"/"+version+"/"+chunk_no;
+                String file_path="./files/server/"+this.server_number+"/backup/"+file_id+"/"+chunk_no;
                 byte[] body= this.readAnyFile(file_path);
 
                 try {
@@ -792,9 +740,9 @@ public class Server {
             String version = mensagem[1];
             String sender_id = mensagem[2];
             String file_id = mensagem[3];
-            if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(version))
+            if (this.info.containsKey(file_id))
             {
-                String path="./files/server/"+this.server_number+"/save/"+file_id+"/"+version;
+                String path="./files/server/"+this.server_number+"/backup/"+file_id;
                 File dir= new File(path);
                 if(dir.exists())
                 {
@@ -804,7 +752,7 @@ public class Server {
                     }
                     dir.delete();
                 }
-                for(String chunks:this.info.get(file_id).get(version).keySet())
+                for(String chunks:this.info.get(file_id).keySet())
                 {
                     try {
                         Random rand = new Random();
@@ -818,14 +766,10 @@ public class Server {
                         return;
                     }
                 }
-                this.info.get(file_id).remove(version);
-                if(this.info.get(file_id).size()==0)
-                {
-                    this.info.remove(file_id);
-                    String path2="./files/server/"+this.server_number+"/save/"+file_id;
-                    File dir2= new File(path2);
-                    dir2.delete();
-                }
+                this.info.remove(file_id);
+                String path2="./files/server/"+this.server_number+"/backup/"+file_id;
+                File dir2= new File(path2);
+                dir2.delete();
             }
             this.saveInfo();
         }
@@ -835,9 +779,9 @@ public class Server {
             String sender_id = mensagem[2];
             String file_id = mensagem[3];
             String chunk_no = mensagem[4];
-            if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(version) && this.info.get(file_id).get(version).containsKey(chunk_no))
+            if (this.info.containsKey(file_id)  && this.info.get(file_id).containsKey(chunk_no))
             {
-                this.info.get(file_id).get(version).get(chunk_no).remove(sender_id);
+                this.info.get(file_id).get(chunk_no).remove(sender_id);
             }
             //TODO verificar se o count de replicação esta direito, valor dentro do ficheiro. Se não mandar putchunk do body
             this.saveInfo();
