@@ -10,26 +10,59 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.Random;
 
 public class Server {
-
+    /**
+     * One server, one singleton
+     */
     public static Server singleton;
-
+    /**
+     * String with the identification of the server
+     */
     private String server_number;
+    /**
+     * The current protocol version the server is running
+     */
     private String protocol_version;
-
+    /**
+     * Multicast data channel
+     */
     private Udp MDB;
+    /**
+     * Multicast control channel
+     */
     private Udp MC;
+    /**
+     * Multicast data recovery channel
+     */
     private Udp MDR;
-
-    private long max_size=1000000;//bytes
+    /**
+     * Max space the server can save files in byte amount
+     */
+    private long max_size=1000000;
+    /**
+     * The current space the server is using in byte amount
+     */
     private long current_size=0;
 
-    // Fileid chunkNo rep degree
+    /**
+     * Class Info to save a retrieve information
+     */
     private Info info_io;
-
+    /**
+     * Data structure for saving information about the chunks saved. File_id -> Chunk_no -> Peers that saved file (first value of the arraylist is "REP<desired replication degree>"")
+     */
     public HashMap<String, HashMap<String, ArrayList<String>>> info = new HashMap<String, HashMap<String, ArrayList<String>>>();
+    /**
+     * Data structure for saving information about the file this peer has saved. //TODO já não me lembro de como isto é, completar
+     */
     public HashMap<String, HashMap<String, ArrayList<String>>> files_info = new HashMap<String, HashMap<String, ArrayList<String>>>();
+    /**
+     * Data structure for confirming the putchunks. File_id -> Chunk_no -> Peers that saved file
+     */
     public HashMap<String, HashMap<String, ArrayList<String>>> confirmation = new HashMap<String, HashMap<String, ArrayList<String>>>();
-
+    /**
+     * Main
+     * @param args arguments
+     */
     public static void main(String[] args) {
         if (args.length != 5) { //TODO inputs dos arguments vao ainda ser diferentes +info em section 3
             System.out.println(
@@ -39,10 +72,26 @@ public class Server {
         Server server = new Server(args[0],args[1],args[3], Integer.parseInt(args[4]));
         server.run(args[2]);
     }
-
+    /**
+     * Constructor for the class Server
+     * @param version Version of the protocol currently in use. "1.0" for base protocol
+     * @param server_number The identification of the Server
+     * @param address The address to use for the multicast channels
+     * @param port The port to use for the multicast channels. If 1, MDB will have 1 , MC 2 and MDR 3
+     */
     public Server(String version,String server_number, String address, int port) {
         Server.singleton=this;
         this.server_number=server_number;
+        // Create the server local storage directory
+        String path = "./files/server/" + this.server_number + "/backup/";
+        File directory = new File(path);
+        if (!directory.exists())
+            directory.mkdirs();
+            
+        String path2 = "./files/server/" + this.server_number + "/restored/";
+        File directory2 = new File(path2);
+        if (!directory2.exists())
+            directory2.mkdirs();
         this.protocol_version=version;
         this.info_io= new Info();
         this.MDB = new Udp(address, port, "MDB");
@@ -60,20 +109,10 @@ public class Server {
     }
 
     /**
-     * Função chamada no inicio do programa
+     * Function called to finish the server setup
+     * @param access_point //TODO
      */
     public void run(String access_point) {
-        // Create the server local storage directory
-        String path = "./files/server/" + this.server_number + "/backup/";
-        File directory = new File(path);
-        if (!directory.exists())
-            directory.mkdirs();
-            
-        String path2 = "./files/server/" + this.server_number + "/restored/";
-        File directory2 = new File(path2);
-        if (!directory2.exists())
-            directory2.mkdirs();
-        /*
         try {
             DBS obj = new DBS(this);
             ClientInterface stub = (ClientInterface) UnicastRemoteObject.exportObject(obj, 0);
@@ -87,13 +126,13 @@ public class Server {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
         }
-        */
         
+        /*
         try {
             if (this.server_number.equals("1")) {
                 //this.sendDeletemessage("1.1", "./files/client/t.txt");
                 //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
-                this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
+                //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
             } else {
                 // this.MDB.receive();
             }
@@ -101,20 +140,18 @@ public class Server {
         } catch (Exception e) {
             System.out.println("Message format wrong");
             //System.exit(3);
-        }
+        }*/
 
     }
-
     /**
-     * Guarda um ficheiro cuja localização esta em path
-     *  
-     * @param version Versão que o ficheiro tem e que quero com que seja guardada
-     * @param path    Path onde se encontra guardado o ficheiro
-     * @param rep_deg Degree de replicação que eu quero se seja atingido
+     * Sends the putchunk message. Should be used when you want to save a file to peers
+     * @param path The path where the file is stored in the client side
+     * @param rep_deg The desired replication degree
+     * @return True if it was possible to save the file in the peers
      */
-    public void sendPutChunkMessage(String version, String path, int rep_deg) {
+    public Boolean sendPutChunkMessage(String path, int rep_deg) {
         byte[] body_completo = this.readAnyFile(path);
-        if(body_completo==null)return;
+        if(body_completo==null)return false;
         int divisoes = body_completo.length / 64000;
 
         if(divisoes!=0)
@@ -163,12 +200,12 @@ public class Server {
                 String chunk_no_j=Integer.toString(j);
                 Message mensagem = null;
                 try {
-                    mensagem = new Message(new String[] { "PUTCHUNK", version, this.server_number,
+                    mensagem = new Message(new String[] { "PUTCHUNK", this.protocol_version, this.server_number,
                             path, chunk_no_j, Integer.toString(rep_deg) });
                     mensagem.hashFileId();
                 } catch (Exception e) {
                     System.out.println("Message format wrong");
-                    return;
+                    return false;
                 }
 
                 if(this.confirmation.get(mensagem.getFileId()).get(chunk_no_j).size() < rep_deg)
@@ -204,17 +241,24 @@ public class Server {
             i*=2;
             if (i == 32) {
                 System.out.println("Couldn't backup the data with the replication degree desired. Skipping");
-                return;
+                return false;
             }
         }
 
         this.confirmation.remove(Message.getSHA(path));
         this.info_io.saveFileInfo();
-
+        return true;
     }
-
+    
+    /**
+     * Sends a putchunk message. Should be used when the replication degree falls below the desired degree
+     * @param version The version of the protocol used when resived the removed message
+     * @param path The path of file saved in the server
+     * @param file_id The file id of the file. Should be already encripted
+     * @param chunk_no The chunk number we want to resend to be saved again
+     * @param rep_deg The replication degree desired
+     */
     public void sendPutChunkChunkMessage(String version, String path, String file_id,String chunk_no, int rep_deg) {
-        System.out.println("here");
         byte[] body_completo = this.readAnyFile(path);
         if(body_completo==null)return;
 
@@ -283,10 +327,9 @@ public class Server {
     }
 
     /**
-     * Manda uma packet para o MDB channel, Message & Body
-     * 
-     * @param message A mensagem que quero que seja inviada. @Message
-     * @param body    Body do chunk que quero enviar
+     * Sends a message to the MDB channel.
+     * @param message The header of the message
+     * @param body The body with the file information
      */
     public void MDBsendMessage(Message message, byte[] body) {
         try {
@@ -295,9 +338,15 @@ public class Server {
         } catch (Exception e) {
             System.out.println("Couldn't send a data message. Skipping...");
             return ;
-        }
+        } 
     }
 
+
+    /**
+     * Clears unnecessary space with replication degree higher than the desired
+     * @param amount The minimum amout to remove
+     * @return True if it was possible to remove the desired amount, false otherwise
+     */
     public Boolean clearSpaceToSave(long amount)
     {
         long removed=0;
@@ -329,11 +378,17 @@ public class Server {
     }
 
     /**
-     * É chamada quando um packet é recebido no MDB channel. Informação sobre a
-     * mensagem esta guardada em this.MDB.getMessage() e this.MDB.getBody().trim()
+     * This function is called when a MDB message is received.
+     * @param mensagem The header of the message received
+     * @param body The body of the message received
      */
     public void MDBmessageReceived(String[] mensagem,byte[] body) {
         System.out.println("Received a multicast data channel message");
+        if(!mensagem[0].equals("PUTCHUNK"))
+        {
+            System.out.println("Wrong message. Skipping");
+            return;
+        }
         String version = mensagem[1];
         //String sender_id = mensagem[2];
         String file_id = mensagem[3];
@@ -388,26 +443,37 @@ public class Server {
         }
         this.info_io.saveInfo();
         this.waitRandom();
-        this.sendStoredMessage(version,this.server_number, file_id, chunk_no);
+        this.sendStoredMessage(file_id, chunk_no);
 
     }
-
+    /**
+     * Used to save diferents part of a chunked message
+     */
     private HashMap<String,HashMap<String,byte[]>> chunk_body_string = new HashMap<String,HashMap<String,byte[]>>();
-
-    public Boolean sendStoredMessage(String version, String sender_id, String file_id, String chunk_no) {
+    
+    /**
+     * Sends a stored message
+     * @param file_id The file id of the stored chunk
+     * @param chunk_no The chunk number saved
+     */
+    public void sendStoredMessage(String file_id, String chunk_no) {
         try {
             Message mandar = new Message(
-                    new String[]{ "STORED", version, this.server_number, file_id, chunk_no });
+                    new String[]{ "STORED", this.protocol_version, this.server_number, file_id, chunk_no });
             this.MCsendMessage(mandar);
         } catch (Exception e) {
             System.out.println("Couldn't send the STORED message. Skipping...");
-            return false;
+            return ;
         }
-        return true;
     }
 
-
-    public void saveFile(String path,byte[] body)
+    /**
+     * Saves a file to the restored directory
+     * @param path The original path of the file, or the name of the file
+     * @param body The content of the file
+     * @return True if it was possible to save the file, false otherwise
+     */
+    public Boolean saveFile(String path,byte[] body)
     {
         File file= new File(path);
         String name = file.getName();
@@ -427,12 +493,17 @@ public class Server {
         } catch (IOException e) {
             System.out.println("Couldn\'t write to file. Skipping...");
             save_file.delete();
-            return;
+            return false;
         }
+        return true;
 
     }
-
-    public byte[] sendGetChunkMessage(String version, String file_id) {
+    /**
+     * Sends a getchunk message
+     * @param file_id The path or name of the original file
+     * @return The content of the file
+     */
+    public byte[] sendGetChunkMessage(String file_id) {
         int number_of_chunks;
         if (this.files_info.containsKey(file_id)) {
             number_of_chunks = this.files_info.get(file_id).size();
@@ -472,7 +543,7 @@ public class Server {
                         continue;
                     }
                     System.out.println("Getting chunk number "+i);
-                    Message mandar = new Message(new String[]{ "GETCHUNK", version,this.server_number,
+                    Message mandar = new Message(new String[]{ "GETCHUNK", this.protocol_version,this.server_number,
                             file_id, Integer.toString(i) });
                     this.MCsendMessage(mandar);
                 }
@@ -497,8 +568,11 @@ public class Server {
         return devolver;
 
     }
-
-    public Boolean sendDeletemessage(String version,String file_id)
+    /**
+     * Sends a delete message
+     * @param file_id The file id we want to delete
+     */
+    public Boolean sendDeletemessage(String file_id)
     {
         if(this.files_info.containsKey(file_id))
         {
@@ -510,7 +584,7 @@ public class Server {
             return false;
         }
         try {
-            Message mandar = new Message( new String[]{ "DELETE", version, this.server_number, file_id});
+            Message mandar = new Message( new String[]{ "DELETE", this.protocol_version, this.server_number, file_id});
             mandar.hashFileId();
             this.MCsendMessage(mandar);
         } catch (Exception e) {
@@ -521,41 +595,40 @@ public class Server {
         return true;
 
     }
-    
-    public Boolean sendRemovedMessage(String version,String file_id,String chunk_no)
+    /**
+     * Sends a removed message
+     * @param file_id The file id's chunk removed
+     * @param chunk_no The chunk removed
+     */
+    public void sendRemovedMessage(String file_id,String chunk_no)
     {
         try {
-            Message mandar = new Message( new String[]{ "REMOVED", version,this.server_number, file_id ,chunk_no});
+            Message mandar = new Message( new String[]{ "REMOVED", this.protocol_version,this.server_number, file_id ,chunk_no});
             this.MCsendMessage(mandar);
         } catch (Exception e) {
             System.out.println("Couldn't send the REMOVED message. Skipping...");
-            return false;
+            return;
         }
         this.info_io.saveFileInfo();
-        return true;
 
     }
-
     /**
-     * Mandar um packet para o canal MC
-     * 
-     * @param message A mensagem que eu quero mandar
-     * @return True se foi possivel mandar a mensagem ou false caso contrario
+     * Sends a message to the MC channel
+     * @param message The header of the message
      */
-    public Boolean MCsendMessage(Message message) {
+    public void MCsendMessage(Message message) {
         try {
             System.out.println("Sending message to MC.");
             this.MC.sendMessage(message.getMessage());
         } catch (Exception e) {
             System.out.println("Couldn't send a control message. Skipping...");
-            return false;
+            return ;
         }
-        return true;
     }
-
     /**
-     * Função chamada quando é recebida um packet no MC channel. Informação em
-     * this.MC.getMessage()
+     * This function is called when a MC message is received
+     * @param mensagem The header of the message
+     * @param body The body if there is any
      */
     public void MCmessageReceived(String[] mensagem,byte[] body) {
         System.out.println("Received a multicast control channel message");
@@ -636,22 +709,34 @@ public class Server {
             }
         }
     }
-
-    public Boolean sendChunkMessage(Message message,byte[] body)
+    /**
+     * Sends a chunk message 
+     * @param message The header of the message
+     * @param body The body of the chunk to send
+     */
+    public void sendChunkMessage(Message message,byte[] body)
     {
         try {
             System.out.println("Sending message to MDB.");
             this.MDR.sendMessageBody(message.getMessage(), body);
         } catch (Exception e) {
             System.out.println("Couldn't send a data message. Skipping...");
-            return false;
+            return ;
         }
-        return true;
 
     }
-
+    /**
+     * This function is called when a MDR message is received
+     * @param mensagem The header of the message received
+     * @param body The body of the chunk received
+     */
     public void MDRmessageReceived(String[] mensagem,byte[] body) {
         System.out.println("Received a multicast data recovery channel message");
+        if(!mensagem[0].equals("CHUNK"))
+        {
+            System.out.println("Wrong message. Skipping...");
+            return;
+        }
         String version = mensagem[1];
         String sender_id = mensagem[2];
         String file_id = mensagem[3];
@@ -663,33 +748,53 @@ public class Server {
 
 
     }
-
+    /**
+     * Sets the server identifier
+     * @param number The server identification
+     */
     public void setServerNumber(String number) {
         this.server_number = number;
     }
-
+    /**
+     * Sets the protocol version of this server to run
+     * @param ver The version I want to swap to
+     */
     public void setProtocolVersion(String ver) {
         this.protocol_version = ver;
     }
-
+    /**
+     * Set the current size the server is taking
+     * @param new_size The new size the server is taking
+     */
     public void setCurrentSize(long new_size)
     {
         this.current_size=new_size;
     }
-
+    /**
+     * Gets the current size the server is taking
+     * @return The current size the server is taking
+     */
     public long getCurrentSize()
     {
         return this.current_size;
     }
-
+    /**
+     * Get the current version the server is running
+     * @return The version the server is running
+     */
     public String getVersion() {
         return this.protocol_version;
     }
-
+    /**
+     * Gets the identification of the server
+     * @return The identification of the server
+     */
     public String getServerNumber() {
         return this.server_number;
     }
-
+    /**
+     * Waits a random amount of time between 0 and 400 ms
+     */
     public void waitRandom()
     {
         try {
@@ -701,6 +806,10 @@ public class Server {
             Thread.currentThread().interrupt();
         }
     }
+    /**
+     * Sleeps the amount of time disired
+     * @param tempo The amount of time disired to sleep measured in ms
+     */
     public void waitAmount(int tempo)
     {
         try {
@@ -710,7 +819,11 @@ public class Server {
             Thread.currentThread().interrupt();
         }
     }
-
+    /**
+     * Reads any type of file
+     * @param path The path of the file we want to read
+     * @return Array of bytes with the file information
+     */
     public byte[] readAnyFile(String path)
     {
         File file = new File(path);
@@ -725,10 +838,17 @@ public class Server {
             return null;
         }
     }
-
+    /**
+     * Auxiliar to check if anyother peer have started the putchunk protocol on the same file
+     */
     HashMap<String,ArrayList<String>> rep_check= new HashMap<String,ArrayList<String>>();
-
-    private void checkRepDegree(String file_id,String chunk_no,String version)
+    /**
+     * Check the replication degree of a selected chunk. Should be called after receiving a removed message
+     * @param file_id The file id we want to check
+     * @param chunk_no The chunk number we want to check
+     * @param version The version of the protocol of the removed message
+     */
+    private void checkRepDegree(String file_id,String chunk_no)
     {
         if(this.info.containsKey(file_id) && this.info.get(file_id).containsKey(chunk_no))
         {
@@ -755,7 +875,10 @@ public class Server {
             }
         }
     }
-
+    /**
+     * TODO
+     * @return
+     */
     public String retrieve_info_file_data()
     {
         String data = "------------------------------------------- LOCAL SERVICE STATE INFO -------------------------------------------\n\n\n";
@@ -779,7 +902,10 @@ public class Server {
         }
         return data += "\n\n";
     }
-
+    /**
+     * TODO
+     * @return
+     */
     public String retrieve_info_data()
     {
         String data = "";
@@ -803,7 +929,10 @@ public class Server {
         }
         return data += "\n\n";
     }
-
+    /**
+     * TODO
+     * @return
+     */
     public String retrieve_storage_data()
     {
         double perc = this.current_size*100/this.max_size;
