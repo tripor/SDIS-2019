@@ -848,7 +848,7 @@ public class Server {
      * @param chunk_no The chunk number we want to check
      * @param version The version of the protocol of the removed message
      */
-    private void checkRepDegree(String file_id,String chunk_no)
+    private void checkRepDegree(String file_id,String chunk_no,String  version)
     {
         if(this.info.containsKey(file_id) && this.info.get(file_id).containsKey(chunk_no))
         {
