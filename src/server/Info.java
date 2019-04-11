@@ -116,7 +116,16 @@ public class Info {
             // File id
             for (String i : Server.singleton.files_info.keySet()) {
                 bw.write(i + "\n");
-                bw.write(Server.singleton.files_info.get(i) + "\n");
+                bw.write(Server.singleton.files_info.get(i).size() + "\n");
+                //chunks
+                for (String j : Server.singleton.files_info.get(i).keySet()) {
+                    bw.write(j + "\n");
+                    // rep
+                    bw.write(Server.singleton.files_info.get(i).get(j).size() + "\n");
+                    for (int l = 0; l < Server.singleton.files_info.get(i).get(j).size(); l++) {
+                        bw.write(Server.singleton.files_info.get(i).get(j).get(l) + "\n");
+                    }
+                }
             }
             bw.close();
 
@@ -231,7 +240,18 @@ public class Info {
                 for (int i = 0; i < info_size; i++) {
                     String file_id = bufferedReader.readLine();
                     int chunk_no_size = Integer.parseInt(bufferedReader.readLine());
-                    Server.singleton.files_info.put(file_id, chunk_no_size);
+                    HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
+                    for (int j = 0; j < chunk_no_size; j++) {
+                        String chunk_no_st = bufferedReader.readLine();
+                        int rep = Integer.parseInt(bufferedReader.readLine());
+                        ArrayList<String> rep_arr = new ArrayList<String>();
+                        for (int t = 0; t < rep; t++) {
+                            String rep_str = bufferedReader.readLine();
+                            rep_arr.add(rep_str);
+                        }
+                        chunk_no_hash.put(chunk_no_st, rep_arr);
+                    }
+                    Server.singleton.files_info.put(file_id, chunk_no_hash);
                 }
                 bufferedReader.close();
             } catch (IOException e) {
