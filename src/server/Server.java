@@ -182,8 +182,8 @@ public class Server {
                     numero_mensagens_confirmadas++;
 
                     ArrayList<String> reps = new ArrayList<String>();
-                    reps.add(rep_deg); //o rep desired
-                    reps.add(this.confirmation.get(mensagem.getFileId()).get(chunk_no_j).size()); //o rep verdadeiro
+                    reps.add(Integer.toString(rep_deg)); //o rep desired
+                    reps.add(Integer.toString(this.confirmation.get(mensagem.getFileId()).get(chunk_no_j).size())); //o rep verdadeiro
                     if(this.files_info.containsKey(path))
                     {
                         this.files_info.get(path).put(chunk_no_j, reps);
@@ -638,6 +638,64 @@ public class Server {
     {
         //TODO: verificar se o count de replicação esta direito, valor dentro do ficheiro. Se não mandar putchunk do body
 
+    }
+
+    public String retrieve_info_file_data()
+    {
+        String data = "------------------------------------------- LOCAL SERVICE STATE INFO -------------------------------------------\n\n\n";
+        
+        for(String i : this.files_info.keySet())
+        {
+            data += "Backed up file information:\n\n";
+            data += "\tFile Pathname: " + i + "\n";
+            data += "\tBackup id: " + Message.getSHA(i) + "\n";
+            Boolean init_info = true;
+            for(String j : this.files_info.get(i).keySet())
+            {
+                if(init_info)
+                {
+                    data += "\tDesired Replication Degree: " + this.files_info.get(i).get(j).get(0) + "\n";
+                    data += "\t\tChunk - Perceived Rep Degree:\n";
+                    init_info = false;
+                }
+                data += "\t\t" + j + "\t" + this.files_info.get(i).get(j).get(1) + "\n";
+            }
+        }
+        return data += "\n\n";
+    }
+
+    public String retrieve_info_data()
+    {
+        String data = "";
+        for(String i : this.info.keySet())
+        {
+            data += "Chunks Stored (" + i + "):\n\n";
+            for(String j : this.info.get(i).keySet())
+            {
+                data += "Id: " + j + "\t";
+
+                String path="./files/server/"+this.server_number+"/backup/"+i+"/"+j;
+                File dir= new File(path);
+                if(dir.exists())
+                {
+                    long SIZE = dir.length();
+                    SIZE /= 1000;
+                    data += "Size: " + Long.toString(SIZE) + "." + Long.toString(SIZE % 1000) + "KB\t";
+                }
+                data += "Perceived Rep Degree: " + Integer.toString(this.info.get(i).get(j).size()) + "\n";
+            }
+        }
+        return data += "\n\n";
+    }
+
+    public String retrieve_storage_data()
+    {
+        double perc = this.current_size*100/this.max_size;
+        Double p = new Double(perc);
+        String data = "Peer's Stored Capacity: " + Long.toString(this.max_size / 1000) + "." + Long.toString(this.max_size % 1000) + "KB\t";
+        data += "Used: " + Long.toString(this.current_size / 1000) + "." + Long.toString(this.current_size % 1000) + "KB (" + p.toString() + "%)\n\n";
+
+        return data;
     }
 
 }
