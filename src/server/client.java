@@ -62,7 +62,8 @@ class Client
                     System.err.println("The STATE protocol must have 2 arguments: \"<peer_ap> <sub_protocol>\"");
                     System.exit(1);
                 }
-                stub.state();
+                String state = stub.state();
+                System.out.println(state);
                 break;
 
                 default:

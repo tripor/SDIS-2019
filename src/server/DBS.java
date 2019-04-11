@@ -59,10 +59,11 @@ public class DBS implements ClientInterface {
 
     }
 
-    public void state() {
+    public String state() {
 
-        System.out.println("Being build...");
+        String state = this.belong.retrieve_info_file_data() + this.belong.retrieve_info_data() + this.belong.retrieve_storage_data();
 
+        return state;
     }
 
 }

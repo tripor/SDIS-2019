@@ -15,5 +15,5 @@ public interface ClientInterface extends Remote {
 
     void reclaim(String newSize) throws RemoteException;
 
-    void state() throws RemoteException;
+    String state() throws RemoteException;
 }
