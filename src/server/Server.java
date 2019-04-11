@@ -20,14 +20,14 @@ public class Server {
     private Udp MC;
     private Udp MDR;
 
-    private long max_size=10000;//bytes
+    private long max_size=1000000;//bytes
     private long current_size=0;
 
     // Fileid chunkNo rep degree
     private Info info_io;
 
     public HashMap<String, HashMap<String, ArrayList<String>>> info = new HashMap<String, HashMap<String, ArrayList<String>>>();
-    public HashMap<String, Integer> files_info = new HashMap<String, Integer>();
+    public HashMap<String, HashMap<String, ArrayList<String>>> files_info = new HashMap<String, HashMap<String, ArrayList<String>>>();
     public HashMap<String, HashMap<String, ArrayList<String>>> confirmation = new HashMap<String, HashMap<String, ArrayList<String>>>();
 
     public static void main(String[] args) {
@@ -73,7 +73,7 @@ public class Server {
         File directory2 = new File(path2);
         if (!directory2.exists())
             directory2.mkdirs();
-        /*
+        
         try {
             DBS obj = new DBS(this);
             ClientInterface stub = (ClientInterface) UnicastRemoteObject.exportObject(obj, 0);
@@ -86,9 +86,9 @@ public class Server {
         } catch (Exception e) {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
-        }*/
+        }
         
-        
+        /*
         try {
             if (this.server_number.equals("1")) {
                 //this.sendDeletemessage("1.1", "./files/client/t.txt");
@@ -101,7 +101,7 @@ public class Server {
         } catch (Exception e) {
             System.out.println("Message format wrong");
             //System.exit(3);
-        }
+        }*/
 
     }
 
@@ -180,6 +180,18 @@ public class Server {
                 {
                     mensagem_confirmadas[j]=true;
                     numero_mensagens_confirmadas++;
+
+                    ArrayList<String> reps = new ArrayList<String>();
+                    reps.add(rep_deg); //o rep desired
+                    reps.add(this.confirmation.get(mensagem.getFileId()).get(chunk_no_j).size()); //o rep verdadeiro
+                    if(this.files_info.containsKey(path))
+                    {
+                        this.files_info.get(path).put(chunk_no_j, reps);
+                    } else {
+                        HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
+                        chunk_no_hash.put(chunk_no_j, reps);
+                        this.files_info.put(path, chunk_no_hash);
+                    }
                 }
             }
             try {
@@ -190,10 +202,13 @@ public class Server {
                 Thread.currentThread().interrupt();
             }
             i*=2;
+            if (i == 32) {
+                System.out.println("Couldn't backup the data with the replication degree desired. Skipping");
+                return;
+            }
         }
 
         this.confirmation.remove(Message.getSHA(path));
-        this.files_info.put(path, new Integer(divisoes));
         this.info_io.saveFileInfo();
 
     }
@@ -224,6 +239,7 @@ public class Server {
         System.out.println("Received a multicast data channel message");
         if(this.current_size+body.length>this.max_size)
         {
+            //TODO: verificar no enunciado o que é suposto fazer quando um server chega ao limite de tamanho
             System.out.println("Server doesn't have enough space for saving the file. Skipping...");
             return ;
         }
@@ -300,7 +316,7 @@ public class Server {
         if (!directory.exists())
             directory.mkdirs();
         File save_file = new File(path_save+name);
-        if (!save_file.exists()) {
+        if (!save_file.exists()) { //TODO check nisto que aqui nao esta a fazer nada com o 2º try bisto que ele entra aqui cria e depois no matter waht da delete
             try {
                 save_file.createNewFile();
 
@@ -327,12 +343,12 @@ public class Server {
     public byte[] sendGetChunkMessage(String version, String file_id) {
         int number_of_chunks;
         if (this.files_info.containsKey(file_id)) {
-            number_of_chunks = this.files_info.get(file_id).intValue();
+            number_of_chunks = this.files_info.get(file_id).size();
         } else {
             System.out.println("This peer doesn't own this file. (GETCHUNK)");
             return null;
         }
-        byte[] devolver= new byte[this.files_info.get(file_id)*64000];
+        byte[] devolver= new byte[number_of_chunks*64000];
         file_id = Message.getSHA(file_id);
         int pos_atual=0;
         try {
@@ -354,9 +370,9 @@ public class Server {
                 }
             }
             int waiting_number_chunks=0;
+            int espera = 1;
             while(waiting_number_chunks<number_of_chunks)
             {
-                int espera = 1;
                 for (int i = 0; i < number_of_chunks; i++) {
                     if(this.chunk_body_string.get(file_id).get(Integer.toString(i)) != null)
                     {
