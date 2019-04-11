@@ -112,9 +112,9 @@ public class Server {
      * Function called to finish the server setup
      * @param access_point //TODO
      */
-    public void run(String access_point) {
+    public void run(String access_point) {/*
         try {
-            DBS obj = new DBS(this);
+            DBS obj = new DBS();
             ClientInterface stub = (ClientInterface) UnicastRemoteObject.exportObject(obj, 0);
 
             // Bind the remote object's stub in the registry
@@ -125,14 +125,14 @@ public class Server {
         } catch (Exception e) {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
-        }
+        }*/
         
-        /*
+        
         try {
             if (this.server_number.equals("1")) {
                 //this.sendDeletemessage("1.1", "./files/client/t.txt");
-                //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
-                //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
+                //this.sendPutChunkMessage("./files/client/t.txt", 1);
+                this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("./files/client/t.txt"));
             } else {
                 // this.MDB.receive();
             }
@@ -140,7 +140,7 @@ public class Server {
         } catch (Exception e) {
             System.out.println("Message format wrong");
             //System.exit(3);
-        }*/
+        }
 
     }
     /**
@@ -626,6 +626,10 @@ public class Server {
         }
     }
     /**
+     * Data structure for helping in the flux control of the getchunk message
+     */
+    HashMap<String,HashMap<String,Boolean>> flux_control= new HashMap<String,HashMap<String,Boolean>>();
+    /**
      * This function is called when a MC message is received
      * @param mensagem The header of the message
      * @param body The body if there is any
@@ -647,26 +651,39 @@ public class Server {
                     this.info.get(file_id).get(chunk_no).add(sender_id);
             }
             this.info_io.saveInfo();
-        } else if (mensagem[0].equals("GETCHUNK")) { //TODO flux control
+        } else if (mensagem[0].equals("GETCHUNK")) {
             String version = mensagem[1];
             String sender_id = mensagem[2];
             String file_id = mensagem[3];
             String chunk_no = mensagem[4];
             if (this.info.containsKey(file_id) && this.info.get(file_id).containsKey(chunk_no)) {
                 
+                if(this.flux_control.containsKey(file_id))
+                {
+                    this.flux_control.get(file_id).put(chunk_no, false);
+                }
+                else
+                {
+                    HashMap<String,Boolean> novo = new HashMap<String,Boolean>();
+                    novo.put(chunk_no, false);
+                    this.flux_control.put(file_id, novo);
+                }
                 String file_path="./files/server/"+this.server_number+"/backup/"+file_id+"/"+chunk_no;
                 byte[] body2= this.readAnyFile(file_path);
 
                 try {
                     Message message = new Message(new String[]{"CHUNK",version,this.server_number,file_id,chunk_no});
                     this.waitRandom();
-                    this.sendChunkMessage(message, body2);
+                    if(!this.flux_control.get(file_id).get(chunk_no))
+                        this.sendChunkMessage(message, body2);
 
                 } catch (Exception e) {
                     System.out.println("Message with wrong format");
                     return;
                 }
-                
+                this.flux_control.get(file_id).remove(chunk_no);
+                if(this.flux_control.get(file_id).size()==0)
+                    this.flux_control.remove(file_id);
             }
 
         }
@@ -741,6 +758,10 @@ public class Server {
         String sender_id = mensagem[2];
         String file_id = mensagem[3];
         String chunk_no = mensagem[4];
+        if(this.flux_control.containsKey(file_id) && this.flux_control.get(file_id).containsKey(chunk_no))
+        {
+            this.flux_control.get(file_id).put(chunk_no, true);
+        }
         if(this.chunk_body_string.containsKey(file_id) && this.chunk_body_string.get(file_id).containsKey(chunk_no))
         {
             this.chunk_body_string.get(file_id).put(chunk_no, body);

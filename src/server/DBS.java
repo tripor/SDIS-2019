@@ -12,14 +12,12 @@ import java.rmi.server.UnicastRemoteObject;
 */
 public class DBS implements ClientInterface {
 
-    private Server belong;
-
-    public DBS(Server s) { this.belong = s;}
+    public DBS() {}
 
     public void backup(String path,String repDeg) {
 
         try {
-            this.belong.sendPutChunkMessage(this.belong.getVersion(), path , Integer.parseInt(repDeg));
+            Server.singleton.sendPutChunkMessage(path , Integer.parseInt(repDeg));
 
         } catch (Exception e) {
             System.out.println("Message format wrong");
@@ -32,7 +30,7 @@ public class DBS implements ClientInterface {
     public void restore(String path) {
 
         try {
-            this.belong.saveFile(path, this.belong.sendGetChunkMessage(this.belong.getVersion(), path));
+            Server.singleton.saveFile(path, Server.singleton.sendGetChunkMessage(path));
 
         } catch (Exception e) {
             System.out.println("Message format wrong");
@@ -44,7 +42,7 @@ public class DBS implements ClientInterface {
     public void delete(String path) {
 
         try {
-            this.belong.sendDeletemessage(this.belong.getVersion(), path);
+            Server.singleton.sendDeletemessage(path);
 
         } catch (Exception e) {
             System.out.println("Message format wrong");
@@ -61,7 +59,7 @@ public class DBS implements ClientInterface {
 
     public String state() {
 
-        String state = this.belong.retrieve_info_file_data() + this.belong.retrieve_info_data() + this.belong.retrieve_storage_data();
+        String state = Server.singleton.retrieve_info_file_data() + Server.singleton.retrieve_info_data() + Server.singleton.retrieve_storage_data();
 
         return state;
     }
