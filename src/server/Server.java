@@ -287,17 +287,45 @@ public class Server {
      * 
      * @param message A mensagem que quero que seja inviada. @Message
      * @param body    Body do chunk que quero enviar
-     * @return True se foi possivel mandar a mensagem ou false caso contrario
      */
-    public Boolean MDBsendMessage(Message message, byte[] body) {
+    public void MDBsendMessage(Message message, byte[] body) {
         try {
             System.out.println("Sending message to MDB.");
             this.MDB.sendMessageBody(message.getMessage(), body);
         } catch (Exception e) {
             System.out.println("Couldn't send a data message. Skipping...");
-            return false;
+            return ;
         }
-        return true;
+    }
+
+    public Boolean clearSpaceToSave(long amount)
+    {
+        long removed=0;
+        for(String i:this.info.keySet())
+        {
+            for(String j:this.info.get(i).keySet())
+            {
+                String rep_string=this.info.get(i).get(j).get(0);
+                String[] divided = rep_string.split("REP");
+                int rep_deg=Integer.parseInt(divided[1]);
+                this.waitRandom();
+                if(this.info.get(i).get(j).size()-1 > rep_deg)
+                {
+                    String path="./files/server/"+this.server_number+"/backup/"+i+"/"+j;
+                    File delete= new File(path);
+                    if(delete.exists())
+                    {
+                        removed+=delete.length();
+                        this.current_size-=delete.length();
+                        delete.delete();
+                        this.info.get(i).remove(j);
+                        this.info_io.saveInfo();
+                    }
+                }
+            }
+        }
+        if(removed>=amount) return true;
+        else return false;
     }
 
     /**
@@ -306,12 +334,6 @@ public class Server {
      */
     public void MDBmessageReceived(String[] mensagem,byte[] body) {
         System.out.println("Received a multicast data channel message");
-        if(this.current_size+body.length>this.max_size)
-        {
-            //TODO: verificar no enunciado o que é suposto fazer quando um server chega ao limite de tamanho
-            System.out.println("Server doesn't have enough space for saving the file. Skipping...");
-            return ;
-        }
         String version = mensagem[1];
         //String sender_id = mensagem[2];
         String file_id = mensagem[3];
@@ -319,6 +341,14 @@ public class Server {
         String rep = mensagem[5];
         if(this.rep_check.containsKey(file_id) && this.rep_check.get(file_id).contains(chunk_no))
             this.rep_check.get(file_id).remove(chunk_no);
+        if(this.current_size+body.length>this.max_size)
+        {
+            if(!this.clearSpaceToSave(this.current_size+body.length-this.max_size))
+            {
+                System.out.println("Server doesn't have enough space for saving the file. Skipping...");
+                return ;
+            }
+        }
         String path = "./files/server/" + this.server_number + "/backup/" + file_id;
         String file_path = path + "/" + chunk_no;
         File directory = new File(path);
