@@ -17,8 +17,8 @@ class Client
             Registry registry = LocateRegistry.getRegistry();
             ClientInterface stub = (ClientInterface) registry.lookup(args[0]);
             //String response = stub.request(algo);
-            
-            switch(args[1])
+            /*
+            switch(args[1])//TODO isto diz que precisa de int e não de String
             {
                 case "BACKUP": case "backup":
                 if(args.length != 4)
@@ -69,7 +69,7 @@ class Client
                 default:
                     System.err.println("The protocol entered : " + args[1] + " doesn't correspond to a valid protocol!");
                     System.exit(1);
-            }
+            }*/
         } catch (Exception e) {
 
             System.err.println("Client exception: " + e.toString());

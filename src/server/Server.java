@@ -73,7 +73,7 @@ public class Server {
         File directory2 = new File(path2);
         if (!directory2.exists())
             directory2.mkdirs();
-        
+        /*
         try {
             DBS obj = new DBS(this);
             ClientInterface stub = (ClientInterface) UnicastRemoteObject.exportObject(obj, 0);
@@ -87,13 +87,13 @@ public class Server {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
         }
+        */
         
-        /*
         try {
             if (this.server_number.equals("1")) {
                 //this.sendDeletemessage("1.1", "./files/client/t.txt");
-                this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
-                //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
+                //this.sendPutChunkMessage("1.1", "./files/client/t.txt", 1);
+                this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("1.1", "./files/client/t.txt"));
             } else {
                 // this.MDB.receive();
             }
@@ -101,7 +101,7 @@ public class Server {
         } catch (Exception e) {
             System.out.println("Message format wrong");
             //System.exit(3);
-        }*/
+        }
 
     }
 
@@ -213,6 +213,75 @@ public class Server {
 
     }
 
+    public void sendPutChunkChunkMessage(String version, String path, String file_id,String chunk_no, int rep_deg) {
+        System.out.println("here");
+        byte[] body_completo = this.readAnyFile(path);
+        if(body_completo==null)return;
+
+
+        ArrayList<String> nada = new ArrayList<String>();
+        if (this.confirmation.containsKey(file_id)) {
+            this.confirmation.get(file_id).put(chunk_no, nada);
+        } else {
+            HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
+            chunk_no_hash.put(chunk_no, nada);
+            this.confirmation.put(file_id, chunk_no_hash);
+        }
+        
+        int numero_mensagens_confirmadas=0;
+
+        int i = 1;
+        while(numero_mensagens_confirmadas<1)
+        {
+            Message mensagem = null;
+            try {
+                mensagem = new Message(new String[]{ "PUTCHUNK", version, this.server_number,file_id, chunk_no, Integer.toString(rep_deg) });
+            } catch (Exception e) {
+                System.out.println("Message format wrong");
+                return;
+            }
+
+            if(this.confirmation.get(file_id).get(chunk_no).size() < rep_deg)
+            {
+                System.out.println("Sending chunk number " + chunk_no);
+                this.MDBsendMessage(mensagem, body_completo);
+            }
+            else
+            {
+                numero_mensagens_confirmadas++;
+
+                ArrayList<String> reps = new ArrayList<String>();
+                reps.add(Integer.toString(rep_deg)); //o rep desired
+                reps.add(Integer.toString(this.confirmation.get(file_id).get(chunk_no).size())); //o rep verdadeiro
+                if(this.files_info.containsKey(file_id))
+                {
+                    this.files_info.get(file_id).put(chunk_no, reps);
+                } else {
+                    HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
+                    chunk_no_hash.put(chunk_no, reps);
+                    this.files_info.put(file_id, chunk_no_hash);
+                }
+            }
+            
+            try {
+                Thread.sleep(i * 1000);
+
+            } catch (InterruptedException e) {
+                System.out.println("Thread was interrupted.");
+                Thread.currentThread().interrupt();
+            }
+            i*=2;
+            if (i == 32) {
+                System.out.println("Couldn't backup the data with the replication degree desired. Skipping");
+                return;
+            }
+        }
+
+        this.confirmation.remove(Message.getSHA(path));
+        this.info_io.saveFileInfo();
+
+    }
+
     /**
      * Manda uma packet para o MDB channel, Message & Body
      * 
@@ -248,6 +317,8 @@ public class Server {
         String file_id = mensagem[3];
         String chunk_no = mensagem[4];
         String rep = mensagem[5];
+        if(this.rep_check.containsKey(file_id) && this.rep_check.get(file_id).contains(chunk_no))
+            this.rep_check.get(file_id).remove(chunk_no);
         String path = "./files/server/" + this.server_number + "/backup/" + file_id;
         String file_path = path + "/" + chunk_no;
         File directory = new File(path);
@@ -316,15 +387,6 @@ public class Server {
         if (!directory.exists())
             directory.mkdirs();
         File save_file = new File(path_save+name);
-        if (!save_file.exists()) { //TODO check nisto que aqui nao esta a fazer nada com o 2º try bisto que ele entra aqui cria e depois no matter waht da delete
-            try {
-                save_file.createNewFile();
-
-            } catch (IOException e) {
-                System.out.println("Couldn't create file to write. Skipping...");
-                return;
-            }
-        }
         try {
             save_file.delete();
             save_file.createNewFile();
@@ -539,9 +601,9 @@ public class Server {
             if (this.info.containsKey(file_id)  && this.info.get(file_id).containsKey(chunk_no))
             {
                 this.info.get(file_id).get(chunk_no).remove(sender_id);
+                this.checkRepDegree(file_id,chunk_no,version);
+                this.info_io.saveInfo();
             }
-            this.checkRepDegree();
-            this.info_io.saveInfo();
         }
     }
 
@@ -634,10 +696,34 @@ public class Server {
         }
     }
 
-    private void checkRepDegree()
-    {
-        //TODO: verificar se o count de replicação esta direito, valor dentro do ficheiro. Se não mandar putchunk do body
+    HashMap<String,ArrayList<String>> rep_check= new HashMap<String,ArrayList<String>>();
 
+    private void checkRepDegree(String file_id,String chunk_no,String version)
+    {
+        if(this.info.containsKey(file_id) && this.info.get(file_id).containsKey(chunk_no))
+        {
+            String rep_string=this.info.get(file_id).get(chunk_no).get(0);
+            String[] divided = rep_string.split("REP");
+            int rep_deg=Integer.parseInt(divided[1]);
+            if(this.info.get(file_id).get(chunk_no).size()-1 < rep_deg)
+            {
+                if(this.rep_check.containsKey(file_id))
+                {
+                    this.rep_check.get(file_id).add(chunk_no);
+                }
+                else
+                {
+                    ArrayList<String> novo= new ArrayList<String>();
+                    novo.add(chunk_no);
+                    this.rep_check.put(file_id,novo);
+                }
+                this.waitRandom();
+                if(this.rep_check.get(file_id).contains(chunk_no))
+                {
+                    this.sendPutChunkChunkMessage(version, "./files/server/"+this.server_number+"/backup/"+file_id+"/"+chunk_no,file_id,chunk_no, rep_deg);
+                }
+            }
+        }
     }
 
     public String retrieve_info_file_data()
