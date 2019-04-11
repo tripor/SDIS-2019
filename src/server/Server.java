@@ -647,7 +647,7 @@ public class Server {
                     this.info.get(file_id).get(chunk_no).add(sender_id);
             }
             this.info_io.saveInfo();
-        } else if (mensagem[0].equals("GETCHUNK")) {
+        } else if (mensagem[0].equals("GETCHUNK")) { //TODO flux control
             String version = mensagem[1];
             String sender_id = mensagem[2];
             String file_id = mensagem[3];
