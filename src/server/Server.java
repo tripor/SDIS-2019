@@ -782,6 +782,27 @@ public class Server {
     public void reclaim()
     {
         
+        for(String i:this.info.keySet())
+        {
+            for(String j:this.info.get(i).keySet())
+            {
+                //if the chunks deleted were enough to repair the current size so it is <= to max size
+                if(this.max_size >= this.current_size)
+                    return;
+
+                String path="./files/server/"+this.server_number+"/backup/"+i+"/"+j;
+                File delete= new File(path);
+                if(delete.exists())
+                {
+                    this.current_size-=delete.length();
+                    delete.delete();
+                    this.info.get(i).remove(j);
+                    this.info_io.saveInfo();
+                }
+
+                this.sendRemovedMessage(i,j);
+            }
+        }
     }
 
 
