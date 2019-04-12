@@ -775,10 +775,13 @@ public class Server {
 
     }
 
-
+    /**
+     * This function is called for the reclaim storage protocol
+     * It must clean the chunks needed to get the current size to be < to the new maxSize
+     */
     public void reclaim()
     {
-
+        
     }
 
 
