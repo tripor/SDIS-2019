@@ -357,14 +357,9 @@ public class Server {
                 String rep_string=this.info.get(i).get(j).get(0);
                 String[] divided = rep_string.split("REP");
                 int rep_deg=Integer.parseInt(divided[1]);
-                this.waitRandom(); //TODO Para que serve isto aqui? Estamos a matar j*i*(1-400)ms do programa aqui
+                //this.waitRandom(); //TODO Para que serve isto aqui? Estamos a matar j*i*(1-400)ms do programa aqui
                 if(this.info.get(i).get(j).size()-1 > rep_deg)
                 {
-                    //TODO Este removed e necessario prq estamos a apagar info logo temos de avisar os outros peers para eles fazerem uma recount dos peers que contêm este chunk
-                    this.sendRemovedMessage(i,j); //TODO Com este remove aqui o waitRandom em cima já faz mais sentido
-                    //prq caso mais que um server chegue a este ponto ao mesmo tempo existe a possibilidade de se mais que um
-                    //remover este chunk o rep_deg fique inferior ao desired quando aqui no pior dos casos ele deveria ficar igual
-                    //mas mesmo isto é pouco provavel se é que é possivel mesmo por isso continuamos sem a necessidade do wait em cima
                     String path="./files/server/"+this.server_number+"/backup/"+i+"/"+j;
                     File delete= new File(path);
                     if(delete.exists())
@@ -374,6 +369,13 @@ public class Server {
                         delete.delete();
                         this.info.get(i).remove(j);
                         this.info_io.saveInfo();
+                        System.out.println("372");
+                        //TODO Este removed e necessario prq estamos a apagar info logo temos de avisar os outros peers para eles fazerem uma recount dos peers que contêm este chunk
+                        this.sendRemovedMessage(i,j); //TODO Com este remove aqui o waitRandom em cima já faz mais sentido
+                        System.out.println("375");
+                        //prq caso mais que um server chegue a este ponto ao mesmo tempo existe a possibilidade de se mais que um
+                        //remover este chunk o rep_deg fique inferior ao desired quando aqui no pior dos casos ele deveria ficar igual
+                        //mas mesmo isto é pouco provavel se é que é possivel mesmo por isso continuamos sem a necessidade do wait em cima
                     }
                 }
             }
@@ -430,6 +432,8 @@ public class Server {
                 FileOutputStream fos = new FileOutputStream(file_path);
                 fos.write(body);
                 fos.close();
+
+                this.setCurrentSize(this.current_size + body.length);
 
             } catch (IOException e) {
                 System.out.println("Couldn\'t write to file. Skipping...");
@@ -791,16 +795,19 @@ public class Server {
                     return;
 
                 String path="./files/server/"+this.server_number+"/backup/"+i+"/"+j;
+                System.out.println("796");
                 File delete= new File(path);
+                System.out.println("797");
                 if(delete.exists())
                 {
                     this.current_size-=delete.length();
                     delete.delete();
                     this.info.get(i).remove(j);
                     this.info_io.saveInfo();
+                    System.out.println("803"); //TODO no fim remover estes prints
+                    this.sendRemovedMessage(i,j);
+                    System.out.println("805");
                 }
-
-                this.sendRemovedMessage(i,j);
             }
         }
     }
@@ -993,7 +1000,7 @@ public class Server {
                     SIZE /= 1000;
                     data += "Size: " + Long.toString(SIZE) + "." + Long.toString(SIZE % 1000) + "KB\t";
                 }
-                data += "Perceived Rep Degree: " + Integer.toString(this.info.get(i).get(j).size()) + "\n";
+                data += "Perceived Rep Degree: " + Integer.toString(this.info.get(i).get(j).size()-1) + "\n";
             }
         }
         return data += "\n\n";
@@ -1006,9 +1013,8 @@ public class Server {
     public String retrieve_storage_data()
     {
         double perc = this.current_size*100/this.max_size;
-        Double p = new Double(perc);
         String data = "Peer's Stored Capacity: " + Long.toString(this.max_size / 1000) + "." + Long.toString(this.max_size % 1000) + "KB\t";
-        data += "Used: " + Long.toString(this.current_size / 1000) + "." + Long.toString(this.current_size % 1000) + "KB (" + p.toString() + "%)\n\n";
+        data += "Used: " + Long.toString(this.current_size / 1000) + "." + Long.toString(this.current_size % 1000) + "KB (" + Double.toString(perc) + "%)\n\n";
 
         return data;
     }
