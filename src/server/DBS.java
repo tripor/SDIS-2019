@@ -34,7 +34,7 @@ public class DBS implements ClientInterface {
 
         } catch (Exception e) {
             System.out.println("Message format wrong");
-            //System.exit(3);
+            System.exit(3);
         }
 
     }
@@ -53,7 +53,24 @@ public class DBS implements ClientInterface {
 
     public void reclaim(String newSize) {
 
-        System.out.println("Being build...");
+        long newSizeLong = Long.parseLong(newSize) * 1000; //mult por 1000 para passar os KB para Bytes
+        Server.singleton.setMaxSize(newSizeLong);
+        long curr_size = Server.singleton.getCurrentSize();
+
+        if(newSizeLong < curr_size)
+        {
+            try {
+                if(!Server.singleton.clearSpaceToSave(curr_size-newSizeLong))
+                {
+                    //if this wasnt enough call for the generic reclaim protocol
+                    Server.singleton.reclaim();
+                }
+
+            } catch (Exception e) {
+                System.out.println("Message format wrong");
+                System.exit(3);
+            }
+        }
 
     }
 

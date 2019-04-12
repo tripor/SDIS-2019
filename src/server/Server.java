@@ -357,9 +357,14 @@ public class Server {
                 String rep_string=this.info.get(i).get(j).get(0);
                 String[] divided = rep_string.split("REP");
                 int rep_deg=Integer.parseInt(divided[1]);
-                this.waitRandom();
+                this.waitRandom(); //TODO Para que serve isto aqui? Estamos a matar j*i*(1-400)ms do programa aqui
                 if(this.info.get(i).get(j).size()-1 > rep_deg)
                 {
+                    //TODO Este removed e necessario prq estamos a apagar info logo temos de avisar os outros peers para eles fazerem uma recount dos peers que contêm este chunk
+                    this.sendRemovedMessage(i,j); //TODO Com este remove aqui o waitRandom em cima já faz mais sentido
+                    //prq caso mais que um server chegue a este ponto ao mesmo tempo existe a possibilidade de se mais que um
+                    //remover este chunk o rep_deg fique inferior ao desired quando aqui no pior dos casos ele deveria ficar igual
+                    //mas mesmo isto é pouco provavel se é que é possivel mesmo por isso continuamos sem a necessidade do wait em cima
                     String path="./files/server/"+this.server_number+"/backup/"+i+"/"+j;
                     File delete= new File(path);
                     if(delete.exists())
@@ -769,6 +774,14 @@ public class Server {
 
 
     }
+
+
+    public void reclaim()
+    {
+
+    }
+
+
     /**
      * Sets the server identifier
      * @param number The server identification
@@ -790,6 +803,15 @@ public class Server {
     public void setCurrentSize(long new_size)
     {
         this.current_size=new_size;
+    }
+
+    /**
+     * Set the max size the server is taking
+     * @param new_size The new max size the server is taking
+     */
+    public void setMaxSize(long new_size)
+    {
+        this.max_size=new_size;
     }
     /**
      * Gets the current size the server is taking
