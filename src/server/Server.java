@@ -137,13 +137,13 @@ public class Server {
             } else {
                 //System.out.print(this.clearSpaceToSave(100000));
                 // this.MDB.receive();
-            }*/
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("Message format wrong");
             //System.exit(3);
-        }
+        } */
 
     }
     /**
