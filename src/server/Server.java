@@ -943,8 +943,9 @@ public class Server {
         }
     }
     /**
-     * TODO
-     * @return
+     * This function retrieves the local service state information
+     * for each file whose backup this peer has initiated
+     * @return A string with the info_file data for the local service state info
      */
     public String retrieve_info_file_data()
     {
@@ -970,8 +971,9 @@ public class Server {
         return data += "\n\n";
     }
     /**
-     * TODO
-     * @return
+     * This function retrieves the local service state information
+     * for each chunk it stores
+     * @return A string with the info data for the local service state info
      */
     public String retrieve_info_data()
     {
@@ -997,8 +999,9 @@ public class Server {
         return data += "\n\n";
     }
     /**
-     * TODO
-     * @return
+     * This function retrieves the local service state information
+     * for the peer's storage capacity and the amount of storage (both in KBytes) used to backup the chunks.
+     * @return A string with the info data for the local service state info
      */
     public String retrieve_storage_data()
     {
