@@ -25,6 +25,9 @@ client: $(CLIENT_CLASS_FILE)
 
 $(CLIENT_CLASS_FILE): $(CLIENT_FILE)
 	rm -f $(CLIENT_CLASS_FILE)
+	if [ ! -d "./bin" ]; then \
+		mkdir ./bin; \
+	fi
 	if [ ! -d "$(CLIENT_BIN)" ]; then \
 		mkdir $(CLIENT_BIN); \
 	fi
