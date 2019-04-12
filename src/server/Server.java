@@ -132,18 +132,18 @@ public class Server {
         try {
             if (this.server_number.equals("1")) {
                 //this.sendDeletemessage("./files/client/t.txt");
-                //this.sendPutChunkMessage("./files/client/t.txt", 1);
+                this.sendPutChunkMessage("./files/client/t.txt", 1);
                 //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("./files/client/t.txt"));
             } else {
-                System.out.print(this.clearSpaceToSave(100000));
+                //System.out.print(this.clearSpaceToSave(100000));
                 // this.MDB.receive();
-            }
+            }*/
 
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("Message format wrong");
             //System.exit(3);
-        }*/
+        }
 
     }
     /**
