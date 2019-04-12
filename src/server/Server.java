@@ -113,7 +113,7 @@ public class Server {
      * @param access_point //TODO
      */
     public void run(String access_point) {
-        /*
+        
         try {
             DBS obj = new DBS();
             ClientInterface stub = (ClientInterface) UnicastRemoteObject.exportObject(obj, 0);
@@ -126,9 +126,9 @@ public class Server {
         } catch (Exception e) {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
-        }*/
+        }
         
-        
+        /*
         try {
             if (this.server_number.equals("1")) {
                 //this.sendDeletemessage("./files/client/t.txt");
@@ -143,7 +143,7 @@ public class Server {
             e.printStackTrace();
             System.out.println("Message format wrong");
             //System.exit(3);
-        }
+        }*/
 
     }
     /**

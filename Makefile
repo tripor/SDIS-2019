@@ -11,6 +11,9 @@ server: $(SERVER_CLASS_FILE)
 
 $(SERVER_CLASS_FILE): $(SERVER_FILE)
 	rm -f $(SERVER_CLASS_FILE)
+	if [ ! -d "./bin" ]; then \
+		mkdir ./bin; \
+	fi
 	if [ ! -d "$(SERVER_BIN)" ]; then \
 		mkdir $(SERVER_BIN); \
 	fi
