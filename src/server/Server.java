@@ -113,6 +113,7 @@ public class Server {
      * @param access_point //TODO
      */
     public void run(String access_point) {
+        /*
         try {
             DBS obj = new DBS();
             ClientInterface stub = (ClientInterface) UnicastRemoteObject.exportObject(obj, 0);
@@ -125,22 +126,24 @@ public class Server {
         } catch (Exception e) {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
-        }
+        }*/
         
-        /*
+        
         try {
             if (this.server_number.equals("1")) {
-                this.sendDeletemessage("./files/client/t.txt");
+                //this.sendDeletemessage("./files/client/t.txt");
                 //this.sendPutChunkMessage("./files/client/t.txt", 1);
                 //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("./files/client/t.txt"));
             } else {
+                System.out.print(this.clearSpaceToSave(100000));
                 // this.MDB.receive();
             }
 
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println("Message format wrong");
             //System.exit(3);
-        }*/
+        }
 
     }
     /**
@@ -350,16 +353,23 @@ public class Server {
     public Boolean clearSpaceToSave(long amount)
     {
         long removed=0;
+        ArrayList<String> to_remove= new ArrayList<String>();
         for(String i:this.info.keySet())
         {
+            if(removed>=amount) break;
             for(String j:this.info.get(i).keySet())
             {
+                if(removed>=amount) break;
                 String rep_string=this.info.get(i).get(j).get(0);
                 String[] divided = rep_string.split("REP");
                 int rep_deg=Integer.parseInt(divided[1]);
-                //this.waitRandom(); //TODO Para que serve isto aqui? Estamos a matar j*i*(1-400)ms do programa aqui
                 if(this.info.get(i).get(j).size()-1 > rep_deg)
                 {
+                    this.waitRandom();
+                    if(!(this.info.get(i).get(j).size()-1 > rep_deg))
+                    {
+                        continue;
+                    }
                     String path="./files/server/"+this.server_number+"/backup/"+i+"/"+j;
                     File delete= new File(path);
                     if(delete.exists())
@@ -367,19 +377,21 @@ public class Server {
                         removed+=delete.length();
                         this.current_size-=delete.length();
                         delete.delete();
-                        this.info.get(i).remove(j);
-                        this.info_io.saveInfo();
-                        System.out.println("372");
-                        //TODO Este removed e necessario prq estamos a apagar info logo temos de avisar os outros peers para eles fazerem uma recount dos peers que contêm este chunk
-                        this.sendRemovedMessage(i,j); //TODO Com este remove aqui o waitRandom em cima já faz mais sentido
-                        System.out.println("375");
-                        //prq caso mais que um server chegue a este ponto ao mesmo tempo existe a possibilidade de se mais que um
-                        //remover este chunk o rep_deg fique inferior ao desired quando aqui no pior dos casos ele deveria ficar igual
-                        //mas mesmo isto é pouco provavel se é que é possivel mesmo por isso continuamos sem a necessidade do wait em cima
+                        to_remove.add(i + " " +j);
+                        //System.out.println("372");
+                        this.sendRemovedMessage(i,j); 
+                        //System.out.println("375");
                     }
                 }
+
             }
         }
+        for(int i=0;i<to_remove.size();i++)
+        {
+            String[] splited=to_remove.get(i).split(" ");
+            this.info.get(splited[0]).remove(splited[1]);
+        }
+        this.info_io.saveInfo();
         if(removed>=amount) return true;
         else return false;
     }
