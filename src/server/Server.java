@@ -797,6 +797,7 @@ public class Server {
      */
     public void reclaim()
     {
+        ArrayList<String> to_remove= new ArrayList<String>();
         
         for(String i:this.info.keySet())
         {
@@ -807,21 +808,25 @@ public class Server {
                     return;
 
                 String path="./files/server/"+this.server_number+"/backup/"+i+"/"+j;
-                System.out.println("796");
                 File delete= new File(path);
-                System.out.println("797");
+
                 if(delete.exists())
                 {
                     this.current_size-=delete.length();
                     delete.delete();
-                    this.info.get(i).remove(j);
-                    this.info_io.saveInfo();
-                    System.out.println("803"); //TODO no fim remover estes prints
+                    to_remove.add(i + " " +j);
+
                     this.sendRemovedMessage(i,j);
-                    System.out.println("805");
                 }
             }
         }
+
+        for(int i=0;i<to_remove.size();i++)
+        {
+            String[] splited=to_remove.get(i).split(" ");
+            this.info.get(splited[0]).remove(splited[1]);
+        }
+        this.info_io.saveInfo();
     }
 
 
