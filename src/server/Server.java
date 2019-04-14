@@ -6,6 +6,7 @@ import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.net.*;
 
 import java.util.Random;
 
@@ -34,6 +35,14 @@ public class Server {
      * Multicast data recovery channel
      */
     private Udp MDR;
+    /**
+     * Tcp for recovery 
+     */
+    private Tcp TCP;
+    /**
+     * A client tcp socket to send chunks
+     */
+    private Socket clientSocket;
     /**
      * Max space the server can save files in byte amount
      */
@@ -66,13 +75,23 @@ public class Server {
      * @param args arguments
      */
     public static void main(String[] args) {
-        if (args.length != 5) { //TODO inputs dos arguments vao ainda ser diferentes +info em section 3
+        if (args.length < 5) { //TODO inputs dos arguments vao ainda ser diferentes +info em section 3
             System.out.println(
-                    "\nNo arguments provided. Use make server arguments=\"<protocol version> <server id> <access point> <IP address> <port number>\"\n");
+                    "\nNo arguments provided. Use make server arguments=\"<protocol version> <server id> <access point> <IP address> <port number> [<init_peer_hostname>]\"\n");
             System.exit(1);
         }
         Server server = new Server(args[0],args[1],args[3], Integer.parseInt(args[4]));
+
+        if(args[0].equals("1.0"))
+        {   
+            String hostName;
+            if(args.length > 5)
+                hostName = args[5];
+            else hostName = "LocalHost";
+            server.setTCP(args[4],hostName);
+        }
         server.run(args[2]);
+
     }
     /**
      * Constructor for the class Server
@@ -113,8 +132,8 @@ public class Server {
     }
 
     /**
-     * Function called to finish the server setup
-     * @param access_point //TODO
+     * Function called to finish the server setup and start rmi to listen to client requests
+     * @param access_point name bound to an rmi register to be used by the client to communicate with a peer that listens do this access name
      */
     public void run(String access_point) {
         
@@ -149,6 +168,26 @@ public class Server {
             //System.exit(3);
         } */
 
+    }
+
+    public void setTCP(String port,String hostname)
+    {
+        if(this.protocol_version.equals("1.0"))
+        {
+            try {
+                if(hostname == "LocalHost")
+                    this.clientSocket = new Socket(InetAddress.getLocalHost(), Integer.parseInt(port) + 4);
+                else this.clientSocket = new Socket(InetAddress.getByName(hostname), Integer.parseInt(port) + 4);
+                this.TCP = new Tcp(Integer.parseInt(port) + 4);
+            } catch (UnknownHostException e) {
+                System.err.println("Don't know about host " + hostname);
+                System.exit(1);
+            } catch (IOException e) {
+                System.err.println("Couldn't get I/O for the connection to " +
+                    hostname);
+                System.exit(1);
+            } 
+        }
     }
     /**
      * Sends the putchunk message. Should be used when you want to save a file to peers
@@ -911,12 +950,30 @@ public class Server {
      */
     public void sendChunkMessage(Message message,byte[] body)
     {
-        try {
-            System.out.println("Sending message to MDB.");
-            this.MDR.sendMessageBody(message.getMessage(), body);
-        } catch (Exception e) {
-            System.out.println("Couldn't send a data message. Skipping...");
-            return ;
+        if(this.protocol_version == "1.1")
+        {
+            try {
+                System.out.println("Sending message to MDB.");
+                this.MDR.sendMessageBody(message.getMessage(), body);
+            } catch (Exception e) {
+                System.out.println("Couldn't send a data message. Skipping...");
+                return ;
+            }
+        }
+        else {
+            System.out.println("Sending message CHUNK to TCP socket.");
+            
+            try {
+                PrintWriter out = new PrintWriter(this.clientSocket.getOutputStream(), true);
+                out.println(message.getMessage());
+                DataOutputStream dOut = new DataOutputStream(this.clientSocket.getOutputStream());
+
+                dOut.writeInt(body.length); // write length of the body
+                dOut.write(body);
+            } catch (IOException e) {
+                System.err.println("Couldn't write to TCP socket the chunk message.");
+                System.exit(1);
+            } 
         }
 
     }
@@ -926,7 +983,9 @@ public class Server {
      * @param body The body of the chunk received
      */
     public void MDRmessageReceived(String[] mensagem,byte[] body) {
-        System.out.println("Received a multicast data recovery channel message");
+        if(this.protocol_version == "1.1")
+            System.out.println("Received a multicast data recovery channel message");
+        else System.out.println("Received a socket TCP message");
         if(!mensagem[0].equals("CHUNK"))
         {
             System.out.println("Wrong message. Skipping...");
@@ -986,6 +1045,12 @@ public class Server {
         this.info_io.saveInfo();
     }
 
+    /**
+     * Runs the TCP for the recory method
+     */
+    public void runTCP() {
+        this.TCP.run();
+    }
 
     /**
      * Sets the server identifier

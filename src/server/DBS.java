@@ -30,7 +30,15 @@ public class DBS implements ClientInterface {
     public void restore(String path) {
 
         try {
-            Server.singleton.saveFile(path, Server.singleton.sendGetChunkMessage(path));
+            if(Server.singleton.getVersion() == "1.0")
+            {
+                if(!Server.singleton.saveFile(path, Server.singleton.sendGetChunkMessage(path)))
+                    System.out.println("Couldn\'t write to file. Skipping...");
+            } else {
+                Server.singleton.runTCP();
+                if(!Server.singleton.saveFile(path, Server.singleton.sendGetChunkMessage(path)))
+                    System.out.println("Couldn\'t write to file. Skipping...");
+            }
 
         } catch (Exception e) {
             System.out.println("Message format wrong");
