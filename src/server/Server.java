@@ -132,8 +132,13 @@ public class Server {
     }
 
     /**
+<<<<<<< HEAD
      * Function called to finish the server setup and start rmi to listen to client requests
      * @param access_point name bound to an rmi register to be used by the client to communicate with a peer that listens do this access name
+=======
+     * Function called to finish the server setup
+     * @param access_point 
+>>>>>>> b97bfda57dbf4c6ac80ad9945a880c4ef705e960
      */
     public void run(String access_point) {
         
