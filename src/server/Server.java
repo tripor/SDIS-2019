@@ -114,7 +114,7 @@ public class Server {
 
     /**
      * Function called to finish the server setup
-     * @param access_point //TODO
+     * @param access_point 
      */
     public void run(String access_point) {
         
