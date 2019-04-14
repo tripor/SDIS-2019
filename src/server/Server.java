@@ -40,9 +40,10 @@ public class Server {
      */
     private Tcp TCP;
     /**
-     * A client tcp socket to send chunks
+     * 
      */
-    private Socket clientSocket;
+    private String hostName;
+    private int port;
     /**
      * Max space the server can save files in byte amount
      */
@@ -81,16 +82,9 @@ public class Server {
             System.exit(1);
         }
         Server server = new Server(args[0],args[1],args[3], Integer.parseInt(args[4]));
-
-        if(args[0].equals("1.0"))
-        {   
-            String hostName;
-            if(args.length > 5)
-                hostName = args[5];
-            else hostName = "LocalHost";
-            server.setTCP(args[4],hostName);
-        }
-        server.run(args[2]);
+        if(args.length > 5)
+            server.run(args[2],args[4],args[5]);
+        else server.run(args[2],args[4],"LocalHost");
 
     }
     /**
@@ -131,16 +125,20 @@ public class Server {
             this.delete_thread= new Delete();
     }
 
+    public void setTCP() {
+        this.TCP = new Tcp();
+    }
     /**
-<<<<<<< HEAD
      * Function called to finish the server setup and start rmi to listen to client requests
      * @param access_point name bound to an rmi register to be used by the client to communicate with a peer that listens do this access name
-=======
-     * Function called to finish the server setup
-     * @param access_point 
->>>>>>> b97bfda57dbf4c6ac80ad9945a880c4ef705e960
      */
-    public void run(String access_point) {
+    public void run(String access_point, String port, String hostname) {
+
+        if(this.protocol_version.equals("1.0"))
+        {   
+            this.hostName = hostname;
+            this.port = Integer.parseInt(port) + 4;
+        }
         
         try {
             DBS obj = new DBS();
@@ -175,25 +173,6 @@ public class Server {
 
     }
 
-    public void setTCP(String port,String hostname)
-    {
-        if(this.protocol_version.equals("1.0"))
-        {
-            try {
-                if(hostname == "LocalHost")
-                    this.clientSocket = new Socket(InetAddress.getLocalHost(), Integer.parseInt(port) + 4);
-                else this.clientSocket = new Socket(InetAddress.getByName(hostname), Integer.parseInt(port) + 4);
-                this.TCP = new Tcp(Integer.parseInt(port) + 4);
-            } catch (UnknownHostException e) {
-                System.err.println("Don't know about host " + hostname);
-                System.exit(1);
-            } catch (IOException e) {
-                System.err.println("Couldn't get I/O for the connection to " +
-                    hostname);
-                System.exit(1);
-            } 
-        }
-    }
     /**
      * Sends the putchunk message. Should be used when you want to save a file to peers
      * @param path The path where the file is stored in the client side
@@ -955,8 +934,8 @@ public class Server {
      */
     public void sendChunkMessage(Message message,byte[] body)
     {
-        if(this.protocol_version == "1.1")
-        {
+        //if(this.protocol_version == "1.0")
+        //{
             try {
                 System.out.println("Sending message to MDB.");
                 this.MDR.sendMessageBody(message.getMessage(), body);
@@ -964,22 +943,36 @@ public class Server {
                 System.out.println("Couldn't send a data message. Skipping...");
                 return ;
             }
-        }
-        else {
+        //}
+        /*else {
             System.out.println("Sending message CHUNK to TCP socket.");
-            
+
             try {
-                PrintWriter out = new PrintWriter(this.clientSocket.getOutputStream(), true);
+                InetAddress Inet;
+                if(this.hostName == "LocalHost")
+                    Inet = InetAddress.getLocalHost();
+                else Inet = InetAddress.getByName(this.hostName);
+                
+
+                Socket clientSocket = new Socket(Inet, this.port);
+                
+                
+                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
                 out.println(message.getMessage());
-                DataOutputStream dOut = new DataOutputStream(this.clientSocket.getOutputStream());
+                
+                DataOutputStream dOut = new DataOutputStream(clientSocket.getOutputStream());
 
                 dOut.writeInt(body.length); // write length of the body
                 dOut.write(body);
+            } catch (UnknownHostException e) {
+                System.err.println("Don't know about host " + this.hostName);
+                //System.exit(1);
             } catch (IOException e) {
                 System.err.println("Couldn't write to TCP socket the chunk message.");
-                System.exit(1);
+                e.printStackTrace();
+                //System.exit(1);
             } 
-        }
+        } */
 
     }
     /**
@@ -988,7 +981,7 @@ public class Server {
      * @param body The body of the chunk received
      */
     public void MDRmessageReceived(String[] mensagem,byte[] body) {
-        if(this.protocol_version == "1.1")
+        if(this.protocol_version == "1.0")
             System.out.println("Received a multicast data recovery channel message");
         else System.out.println("Received a socket TCP message");
         if(!mensagem[0].equals("CHUNK"))
@@ -1051,13 +1044,6 @@ public class Server {
     }
 
     /**
-     * Runs the TCP for the recory method
-     */
-    public void runTCP() {
-        this.TCP.run();
-    }
-
-    /**
      * Sets the server identifier
      * @param number The server identification
      */
@@ -1109,6 +1095,14 @@ public class Server {
      */
     public String getServerNumber() {
         return this.server_number;
+    }
+
+    /**
+     * Gets the port for tcp
+     * @return The identification of the server
+     */
+    public int getPort() {
+        return this.port;
     }
     /**
      * Waits a random amount of time between 0 and 400 ms
