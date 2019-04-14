@@ -108,7 +108,8 @@ public class Server {
             size=Info.folderSize(backup_folder);
         }
         Server.singleton.setCurrentSize(size);
-        this.delete_thread= new Delete();
+        if(this.protocol_version.equals("1.1"))
+            this.delete_thread= new Delete();
     }
 
     /**
@@ -116,7 +117,7 @@ public class Server {
      * @param access_point //TODO
      */
     public void run(String access_point) {
-        /*
+        
         try {
             DBS obj = new DBS();
             ClientInterface stub = (ClientInterface) UnicastRemoteObject.exportObject(obj, 0);
@@ -130,8 +131,8 @@ public class Server {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
         }
-        */
         
+        /*
         try {
             if (this.server_number.equals("1")) {
                 //this.sendDeletemessage("./files/client/t.txt");
@@ -146,7 +147,7 @@ public class Server {
             e.printStackTrace();
             System.out.println("Message format wrong");
             //System.exit(3);
-        } 
+        } */
 
     }
     /**
@@ -418,6 +419,17 @@ public class Server {
         String rep = mensagem[5];
         if(this.rep_check.containsKey(file_id) && this.rep_check.get(file_id).contains(chunk_no))
             this.rep_check.get(file_id).remove(chunk_no);
+
+        
+        if(version.equals("1.1"))
+        {
+            this.waitRandom(1600);
+            if(this.rep_confirmation.containsKey(file_id) && this.rep_confirmation.get(file_id).containsKey(chunk_no))
+            {
+                if(this.rep_confirmation.get(file_id).get(chunk_no).size() >= Integer.parseInt(rep))
+                    return;
+            }
+        }
         if(this.current_size+body.length>this.max_size)
         {
             if(!this.clearSpaceToSave(this.current_size+body.length-this.max_size))
@@ -466,7 +478,8 @@ public class Server {
             this.info.get(file_id).put(chunk_no, inserir);
         }
         this.info_io.saveInfo();
-        this.waitRandom();
+        if(version.equals("1.0"))
+            this.waitRandom();
         this.sendStoredMessage(file_id, chunk_no);
 
     }
@@ -693,6 +706,11 @@ public class Server {
             return ;
         }
     }
+
+    /**
+     * Data structure for helping in the first enhancement to keep rep degrees stable
+     */
+    HashMap<String, HashMap<String, ArrayList<String>>> rep_confirmation = new HashMap<String, HashMap<String, ArrayList<String>>>();
     /**
      * Data structure for helping in the flux control of the getchunk message
      */
@@ -710,6 +728,7 @@ public class Server {
             String sender_id = mensagem[2];
             String file_id = mensagem[3];
             String chunk_no = mensagem[4];
+            
             if (this.confirmation.containsKey(file_id)) {
                 if(this.confirmation.get(file_id).containsKey(chunk_no))
                     if (!this.confirmation.get(file_id).get(chunk_no).contains(sender_id))
@@ -718,6 +737,25 @@ public class Server {
                 if (!this.info.get(file_id).get(chunk_no).contains(sender_id))
                     this.info.get(file_id).get(chunk_no).add(sender_id);
             }
+            
+            if(version.equals("1.1"))
+            {
+                ArrayList<String> inserir = new ArrayList<String>();
+                inserir.add(sender_id);
+                if (this.rep_confirmation.containsKey(file_id)) {
+                    if(this.rep_confirmation.get(file_id).containsKey(chunk_no))
+                    {
+                        if(!this.rep_confirmation.get(file_id).get(chunk_no).contains(sender_id))
+                            this.rep_confirmation.get(file_id).get(chunk_no).add(sender_id);
+                    }
+                    else
+                        this.rep_confirmation.get(file_id).put(chunk_no, inserir);
+                } else {
+                    HashMap<String, ArrayList<String>> chunk_no_hash = new HashMap<String, ArrayList<String>>();
+                    chunk_no_hash.put(chunk_no, inserir);
+                    this.rep_confirmation.put(file_id, chunk_no_hash);
+                }
+            } 
             this.info_io.saveInfo();
         } else if (mensagem[0].equals("GETCHUNK")) {
             String version = mensagem[1];
@@ -1016,9 +1054,25 @@ public class Server {
             Thread.currentThread().interrupt();
         }
     }
+
     /**
-     * Sleeps the amount of time disired
-     * @param tempo The amount of time disired to sleep measured in ms
+     * Waits a random amount of time between 0 and tempo ms
+     * @param tempo The amount of time desired to sleep measured in ms
+     */
+    public void waitRandom(int tempo)
+    {
+        try {
+            Random rand = new Random();
+            int n = rand.nextInt(tempo+1);
+            Thread.sleep(n);
+        } catch (InterruptedException e) {
+            System.out.println("Thread was interrupted.");
+            Thread.currentThread().interrupt();
+        }
+    }
+    /**
+     * Sleeps the amount of time desired
+     * @param tempo The amount of time desired to sleep measured in ms
      */
     public void waitAmount(int tempo)
     {
