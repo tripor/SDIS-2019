@@ -43,6 +43,8 @@ public class Server {
      */
     private long current_size=0;
 
+    private Delete delete_thread;
+
     /**
      * Class Info to save a retrieve information
      */
@@ -52,7 +54,7 @@ public class Server {
      */
     public HashMap<String, HashMap<String, ArrayList<String>>> info = new HashMap<String, HashMap<String, ArrayList<String>>>();
     /**
-     * Data structure for saving information about the file this peer has saved. //TODO já não me lembro de como isto é, completar
+     * Data structure for saving information about the file this peer has saved.
      */
     public HashMap<String, HashMap<String, ArrayList<String>>> files_info = new HashMap<String, HashMap<String, ArrayList<String>>>();
     /**
@@ -106,6 +108,7 @@ public class Server {
             size=Info.folderSize(backup_folder);
         }
         Server.singleton.setCurrentSize(size);
+        this.delete_thread= new Delete();
     }
 
     /**
@@ -113,7 +116,7 @@ public class Server {
      * @param access_point //TODO
      */
     public void run(String access_point) {
-        
+        /*
         try {
             DBS obj = new DBS();
             ClientInterface stub = (ClientInterface) UnicastRemoteObject.exportObject(obj, 0);
@@ -127,12 +130,12 @@ public class Server {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
         }
+        */
         
-        /*
         try {
             if (this.server_number.equals("1")) {
                 //this.sendDeletemessage("./files/client/t.txt");
-                this.sendPutChunkMessage("./files/client/t.txt", 1);
+                //this.sendPutChunkMessage("./files/client/t.txt", 1);
                 //this.saveFile("./files/client/t.txt", this.sendGetChunkMessage("./files/client/t.txt"));
             } else {
                 //System.out.print(this.clearSpaceToSave(100000));
@@ -143,7 +146,7 @@ public class Server {
             e.printStackTrace();
             System.out.println("Message format wrong");
             //System.exit(3);
-        } */
+        } 
 
     }
     /**
@@ -589,28 +592,72 @@ public class Server {
         return devolver;
 
     }
+    ArrayList<String> confirm_delete= new ArrayList<String>();
     /**
      * Sends a delete message
-     * @param file_id The file id we want to delete
+     * @param file_id The file id we want to delete.
      */
     public Boolean sendDeletemessage(String file_id)
     {
-        if(this.files_info.containsKey(file_id))
+        if(this.protocol_version.equals("1.1"))
         {
-            this.files_info.remove(file_id);
+            if(!this.files_info.containsKey(file_id))
+            {
+                System.out.println("Couldn't send the DELETE message. File doesn't exist. Skipping...");
+                return false;
+            }
+            this.confirm_delete.add(Message.getSHA(file_id));//Pode só um server ter a responsabilidade de garantir que todos os outros apaguem tudo. No entanto garantir o rep degree pode ser impossivel e a função nunca returna true
+            for(int i=1;i<=5;i++)
+            {
+                try {
+                    Message mandar = new Message( new String[]{ "DELETE", this.protocol_version, this.server_number, file_id});
+                    mandar.hashFileId();
+                    this.MCsendMessage(mandar);
+                } catch (Exception e) {
+                    System.out.println("Couldn't send the DELETE message. Skipping...");
+                    return false;
+                }
+                this.waitAmount(i*1000);
+                if(this.confirm_delete.contains(Message.getSHA(file_id)))
+                {
+                    if(i!=5)
+                    {
+                        System.out.println("No server has responded. Trying again...");
+                    }
+                    else
+                    {
+                        System.out.println("No server has responded.");
+                    }
+                }
+                else
+                {
+                    System.out.println("Atleast one server has responded to the delete message");
+                    this.files_info.remove(file_id);
+                    break;
+                }
+            }
+            this.confirm_delete.remove(Message.getSHA(file_id));
         }
         else
         {
-            System.out.println("Couldn't send the DELETE message. File doesn't exist. Skipping...");
-            return false;
-        }
-        try {
-            Message mandar = new Message( new String[]{ "DELETE", this.protocol_version, this.server_number, file_id});
-            mandar.hashFileId();
-            this.MCsendMessage(mandar);
-        } catch (Exception e) {
-            System.out.println("Couldn't send the DELETE message. Skipping...");
-            return false;
+            
+            if(this.files_info.containsKey(file_id))
+            {
+                this.files_info.remove(file_id);
+            }
+            else
+            {
+                System.out.println("Couldn't send the DELETE message. File doesn't exist. Skipping...");
+                return false;
+            }
+            try {
+                Message mandar = new Message( new String[]{ "DELETE", this.protocol_version, this.server_number, file_id});
+                mandar.hashFileId();
+                this.MCsendMessage(mandar);
+            } catch (Exception e) {
+                System.out.println("Couldn't send the DELETE message. Skipping...");
+                return false;
+            }
         }
         this.info_io.saveFileInfo();
         return true;
@@ -721,15 +768,38 @@ public class Server {
                 {
                     for(File chunks:dir.listFiles())
                     {
-                        chunks.delete();
                         this.current_size-=chunks.length();
+                        chunks.delete();
                     }
                     dir.delete();
                 }
-                this.info.remove(file_id);
+                if(version.equals("1.0"))
+                    this.info.remove(file_id);
+                else if(version.equals("1.1"))
+                {
+                    ArrayList<String> to_remove= new ArrayList<String>();
+                    for(String i:this.info.get(file_id).keySet())
+                    {
+                        this.info.get(file_id).get(i).remove(this.server_number);
+                        this.info.get(file_id).get(i).remove(sender_id);
+                        if(this.info.get(file_id).get(i).size()==1)
+                            to_remove.add(i);
+                    }
+                    for(int i=0;i<to_remove.size();i++)
+                    {
+                        this.info.get(file_id).remove(to_remove.get(i));
+                    }
+                    if(this.info.get(file_id).size()==0)
+                        this.info.remove(file_id);
+                    this.sendRemovedMessage(file_id, "-1");
+                }
                 String path2="./files/server/"+this.server_number+"/backup/"+file_id;
                 File dir2= new File(path2);
                 dir2.delete();
+            }
+            else if(version.equals("1.1"))
+            {
+                this.sendRemovedMessage(file_id, "-1");
             }
             this.info_io.saveInfo();
         }
@@ -739,7 +809,56 @@ public class Server {
             String sender_id = mensagem[2];
             String file_id = mensagem[3];
             String chunk_no = mensagem[4];
-            if (this.info.containsKey(file_id)  && this.info.get(file_id).containsKey(chunk_no))
+            if(version.equals("1.1"))
+            {
+                if(chunk_no.equals("-1"))
+                {
+                    this.confirm_delete.remove(file_id);
+                    if (this.info.containsKey(file_id))
+                    {
+                        ArrayList<String> remover= new ArrayList<String>();
+                        HashMap<String, HashMap<String, ArrayList<String>>> copy=new HashMap<String, HashMap<String, ArrayList<String>>>(this.info);
+                        for(String i: copy.get(file_id).keySet())
+                        {
+                            this.info.get(file_id).get(i).remove(sender_id);
+                            if(this.info.get(file_id).get(i).contains(this.server_number))
+                                this.checkRepDegree(file_id,i,version);
+                            if(this.info.get(file_id).get(i).size()==1)
+                            {
+                                remover.add(i);
+                            }
+                        }
+                        for(int i=0;i<remover.size();i++)
+                        {
+                            this.info.get(file_id).remove(remover.get(i));
+                        }
+                        if(this.info.get(file_id).size()==0)
+                        {
+                            this.info.remove(file_id);
+                        }
+                    }
+                }
+                else
+                {
+                    if (this.info.containsKey(file_id)  && this.info.get(file_id).containsKey(chunk_no))
+                    {
+                        this.info.get(file_id).get(chunk_no).remove(sender_id);
+                        if(this.info.get(file_id).get(chunk_no).contains(this.server_number))
+                            this.checkRepDegree(file_id,chunk_no,version);
+                        if(this.info.get(file_id).get(chunk_no).size()==1)
+                        {
+                            this.info.get(file_id).remove(chunk_no);
+                        }
+                        if(this.info.get(file_id).size()==0)
+                        {
+                            this.info.remove(file_id);
+                        }
+                    }
+                }
+
+                this.info_io.saveInfo();
+            }
+            else if (this.info.containsKey(file_id)  && this.info.get(file_id).containsKey(chunk_no))
             {
                 this.info.get(file_id).get(chunk_no).remove(sender_id);
                 this.checkRepDegree(file_id,chunk_no,version);

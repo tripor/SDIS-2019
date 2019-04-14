@@ -18,7 +18,7 @@ class Client
             ClientInterface stub = (ClientInterface) registry.lookup(args[0]);
             //String response = stub.request(algo);
             
-            switch(args[1])//TODO isto diz que precisa de int e não de String
+            switch(args[1])
             {
                 case "BACKUP": case "backup":
                 if(args.length != 4)
