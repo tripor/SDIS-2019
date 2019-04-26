@@ -624,8 +624,10 @@ public class Server {
             e.printStackTrace();
             return null;
         }
+        byte[] rightSize= new byte[pos_atual];
+        System.arraycopy(devolver, 0, rightSize, 0, pos_atual);
         this.chunk_body_string.remove(file_id);
-        return devolver;
+        return rightSize;
 
     }
     ArrayList<String> confirm_delete= new ArrayList<String>();
