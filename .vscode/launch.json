@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - Server",
+            "request": "launch",
+            "mainClass": "Server",
+            "projectName": "SDIS-2019_9f45e5e8"
+        }
+    ]
+}

@@ -1,0 +1,20 @@
+SRC_FILES=./src/*.java
+SRC_BIN=./bin/
+SRC_CLASS=$(SRC_BIN)*.class
+arguments=
+
+
+all: compile
+	java -classpath $(SRC_BIN) Server $(arguments)
+
+compile:
+	if [ ! -d "$(SRC_BIN)" ]; then \
+		mkdir $(SRC_BIN); \
+	fi
+	javac -d $(SRC_BIN) -cp $(SRC_BIN) -s ./src $(SRC_FILES)
+
+$(SRC_FILES):
+	compile
+
+clean:
+	rm -r ./bin
