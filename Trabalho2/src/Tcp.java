@@ -1,7 +1,0 @@
-/**
- * Tcp
- */
-public class Tcp {
-
-    
-}

@@ -5,7 +5,7 @@ arguments=
 
 
 all: compile
-	java -classpath $(SRC_BIN) Server $(arguments)
+	java -classpath $(SRC_BIN) src.Server $(arguments)
 
 compile:
 	if [ ! -d "$(SRC_BIN)" ]; then \
@@ -18,3 +18,4 @@ $(SRC_FILES):
 
 clean:
 	rm -r ./bin
+	rm -r ./files
