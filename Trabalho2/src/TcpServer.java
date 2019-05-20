@@ -18,7 +18,6 @@ public class TcpServer {
     public TcpServer(int port) throws IOException {
         this.serverSocketChannel = ServerSocketChannel.open();
         this.serverSocketChannel.socket().bind(new InetSocketAddress(port));
-        //this.serverSocketChannel.configureBlocking(false);
     }
 
     public SocketChannel acceptConnection() throws IOException {

@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.channels.SocketChannel;
@@ -15,15 +16,17 @@ public class Server {
         int port = 0;
         int option = 1;
         String ip = "";
-        if (args.length == 3) {
+        int port2 = 0;
+        if (args.length == 4) {
             option = Integer.parseInt(args[0]);
             port = Integer.parseInt(args[1]);
             ip = args[2];
+            port2 = Integer.parseInt(args[3]);
         } else {
-            System.err.println("\nArguments must be: <option> <server_port> <ip_adress of another server>\n");
+            System.err.println("\nArguments must be: <option> <server_port> <ip_adress of another server> <port of another server>\n");
             System.exit(1);
         }
-        Server server = new Server(option, port, ip);
+        Server server = new Server(option, port, ip,port2);
         server.run();
         server.close();
     }
@@ -34,15 +37,19 @@ public class Server {
 
     private int port;
     private int option;
-    private String address;
+    private String anotherAddress;
+    private int anotherPort;
+    private Node node;
+
 
     private TcpServer tcpServer;
 
-    public Server(int option, int port, String address) {
+    public Server(int option, int port, String address, int anotherPort) {
         Server.executor = (ThreadPoolExecutor)Executors.newCachedThreadPool();
         this.port = port;
         this.option = option;
-        this.address = address;
+        this.anotherAddress = address;
+        this.anotherPort = anotherPort;
         try {
             this.tcpServer = new TcpServer(port);
             System.out.println("Port used:- " + this.tcpServer.getPort());
@@ -72,11 +79,19 @@ public class Server {
     }
 
     public void run() {
-        System.out.println(this.option);
+        System.out.println("Setting up server...");
+        try {
+            this.node = new Node(new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), this.port));
+            
+        } catch (Exception e) {
+            //TODO: handle exception
+        }
+
+
         if(this.option == 3)
         {
             try {
-                TcpMessage message = new TcpMessage(this.address,this.port);
+                TcpMessage message = new TcpMessage(this.anotherAddress,this.anotherPort);
                 message.receiveData();
             } catch (Exception e) {
                 //TODO: handle exception

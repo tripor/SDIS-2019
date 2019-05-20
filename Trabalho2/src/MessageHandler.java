@@ -1,5 +1,8 @@
 package src;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 
 /**
  * MessageHandler
@@ -8,25 +11,19 @@ public class MessageHandler implements Runnable {
 
     private SocketChannel socketChannel;
 
-    public MessageHandler(SocketChannel socketChannel)
+    public MessageHandler(SocketChannel socketChannel) throws IOException
     {
         this.socketChannel=socketChannel;
+        this.socketChannel.configureBlocking(false);
     }
 
-    @Override
-    public void run()
+    public byte[] receiveData() throws IOException
     {
-        System.out.println("ola");
-    }
-}
-
-
-        /*
         ByteBuffer buf = ByteBuffer.allocate(2048);
         int bytesRead;
         int totalBytesRead=0;
         ArrayList<ByteBuffer> list = new ArrayList<ByteBuffer>();
-        while ((bytesRead = this.socket.read(buf)) > 0) {//mudar para threads
+        while ((bytesRead = this.socketChannel.read(buf)) != -1) {
             totalBytesRead += bytesRead;
             list.add(buf);
         }
@@ -37,4 +34,16 @@ public class MessageHandler implements Runnable {
             System.arraycopy(bb.array(), 0, devolver, position, bb.array().length);
             position+=bb.array().length;
         }
-        return devolver;*/
+        return devolver;
+    }
+
+    @Override
+    public void run()
+    {
+        try {
+            System.out.println(this.receiveData());
+        } catch (Exception e) {
+            //TODO: handle exception
+        }
+    }
+}

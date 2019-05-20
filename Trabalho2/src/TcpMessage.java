@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 
 
 /**
@@ -17,6 +18,7 @@ public class TcpMessage {
     {
         this.socketChannel = SocketChannel.open();
         this.socketChannel.connect(new InetSocketAddress(address, port));
+        this.socketChannel.configureBlocking(false);
     }
 
 
@@ -28,11 +30,7 @@ public class TcpMessage {
         buf.flip();
         while(buf.hasRemaining())
         {
-            wait();
-
             this.socketChannel.write(buf);
-
-            notify();
         }
     }
     public void sendData(String data) throws InterruptedException,IOException
@@ -43,22 +41,29 @@ public class TcpMessage {
         buf.flip();
         while(buf.hasRemaining())
         {
-            wait();
-
             this.socketChannel.write(buf);
-
-            notify();
         }
     }
 
 
     public byte[] receiveData() throws IOException
     {
-        ByteBuffer buf = ByteBuffer.allocate(48);
-
-        int bytesRead = this.socketChannel.read(buf);
-
-        return null;
+        ByteBuffer buf = ByteBuffer.allocate(2048);
+        int bytesRead;
+        int totalBytesRead=0;
+        ArrayList<ByteBuffer> list = new ArrayList<ByteBuffer>();
+        while ((bytesRead = this.socketChannel.read(buf)) != -1) {
+            totalBytesRead += bytesRead;
+            list.add(buf);
+        }
+        byte[] devolver = new byte[totalBytesRead];
+        int position=0;
+        for(ByteBuffer bb : list)
+        {
+            System.arraycopy(bb.array(), 0, devolver, position, bb.array().length);
+            position+=bb.array().length;
+        }
+        return devolver;
     }
 
 
