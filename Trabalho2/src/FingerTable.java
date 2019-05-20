@@ -12,8 +12,13 @@ public class FingerTable {
 
     public FingerTable() {
         this.fingerTable = new HashMap<Integer, InetSocketAddress>();
-        for (int i = 1; i <= 32; i++) {
+        for (int i = 1; i <= 64; i++) {
             this.fingerTable.put(i, null);
         }
+    }
+
+    public InetSocketAddress getSuccessor()
+    {
+        return this.fingerTable.get(1);
     }
 }

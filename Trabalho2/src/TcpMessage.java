@@ -20,6 +20,12 @@ public class TcpMessage {
         this.socketChannel.connect(new InetSocketAddress(address, port));
         this.socketChannel.configureBlocking(false);
     }
+    public TcpMessage(InetSocketAddress address) throws IOException
+    {
+        this.socketChannel = SocketChannel.open();
+        this.socketChannel.connect(address);
+        this.socketChannel.configureBlocking(false);
+    }
 
 
     public void sendData(byte[] data) throws InterruptedException,IOException
@@ -52,16 +58,19 @@ public class TcpMessage {
         int bytesRead;
         int totalBytesRead=0;
         ArrayList<ByteBuffer> list = new ArrayList<ByteBuffer>();
-        while ((bytesRead = this.socketChannel.read(buf)) != -1) {
+        ArrayList<Integer> listSize = new ArrayList<Integer>();
+        while ((bytesRead = this.socketChannel.read(buf)) > 0 || list.size()==0) {
+            if(bytesRead==0)continue;
             totalBytesRead += bytesRead;
             list.add(buf);
+            listSize.add(bytesRead);
         }
         byte[] devolver = new byte[totalBytesRead];
         int position=0;
-        for(ByteBuffer bb : list)
+        for(int i=0;i<list.size();i++)
         {
-            System.arraycopy(bb.array(), 0, devolver, position, bb.array().length);
-            position+=bb.array().length;
+            System.arraycopy(list.get(i).array(), 0, devolver, position, listSize.get(i));
+            position+=listSize.get(i);
         }
         return devolver;
     }

@@ -9,6 +9,20 @@ import java.util.ArrayList;
  */
 public class MessageHandler implements Runnable {
 
+    public static final char CR = 0xD;
+    public static final char LF = 0xA;
+    public static final String CRLF = "" + MessageHandler.CR + MessageHandler.LF;
+    public static final String FINDSUCCESSOR = "FINDSUCCESSOR ?" + MessageHandler.CRLF;
+
+    public static String subst(String regex, String... replaces)
+    {
+        for(String replace: replaces)
+        {
+            regex = regex.replaceFirst("\\?", replace);
+        }
+        return regex;
+    }
+
     private SocketChannel socketChannel;
 
     public MessageHandler(SocketChannel socketChannel) throws IOException
@@ -23,16 +37,19 @@ public class MessageHandler implements Runnable {
         int bytesRead;
         int totalBytesRead=0;
         ArrayList<ByteBuffer> list = new ArrayList<ByteBuffer>();
-        while ((bytesRead = this.socketChannel.read(buf)) != -1) {
+        ArrayList<Integer> listSize = new ArrayList<Integer>();
+        while ((bytesRead = this.socketChannel.read(buf)) > 0 || list.size()==0) {
+            if(bytesRead==0)continue;
             totalBytesRead += bytesRead;
             list.add(buf);
+            listSize.add(bytesRead);
         }
         byte[] devolver = new byte[totalBytesRead];
         int position=0;
-        for(ByteBuffer bb : list)
+        for(int i=0;i<list.size();i++)
         {
-            System.arraycopy(bb.array(), 0, devolver, position, bb.array().length);
-            position+=bb.array().length;
+            System.arraycopy(list.get(i).array(), 0, devolver, position, listSize.get(i));
+            position+=listSize.get(i);
         }
         return devolver;
     }
@@ -40,8 +57,19 @@ public class MessageHandler implements Runnable {
     @Override
     public void run()
     {
+        System.out.println("Received a message");
         try {
-            System.out.println(this.receiveData());
+            byte[] bytesReceived = this.receiveData();
+            String stringReceived = Hash.bytesToString(bytesReceived);
+            System.out.println("\tMessage:-->" + stringReceived + "<--");
+            String[] splitedMessage = stringReceived.split(MessageHandler.CRLF);
+            String header = splitedMessage[0];
+            String[] splitedHeader = header.split(" ");
+            if(splitedHeader[0].equals("FINDSUCCESSOR"))
+            {
+                String id = splitedHeader[1];
+                Server.singleton.getNode().findSuccessor(id);
+            }
         } catch (Exception e) {
             //TODO: handle exception
         }

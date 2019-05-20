@@ -32,6 +32,7 @@ public class Server {
     }
 
     public static ThreadPoolExecutor executor;
+    public static Server singleton;
 
     public Boolean serverRunning;
 
@@ -46,6 +47,7 @@ public class Server {
 
     public Server(int option, int port, String address, int anotherPort) {
         Server.executor = (ThreadPoolExecutor)Executors.newCachedThreadPool();
+        Server.singleton = this;
         this.port = port;
         this.option = option;
         this.anotherAddress = address;
@@ -82,7 +84,8 @@ public class Server {
         System.out.println("Setting up server...");
         try {
             this.node = new Node(new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), this.port));
-            
+            if(!this.isFirstServer())
+                this.node.join(new InetSocketAddress(this.anotherAddress,this.anotherPort));
         } catch (Exception e) {
             //TODO: handle exception
         }
@@ -122,6 +125,19 @@ public class Server {
             System.exit(1);
         }
         System.out.println("Server has been closed");
+    }
+
+    public Boolean isFirstServer()
+    {
+        if(this.option == 2)
+            return true;
+        else
+            return false;
+    }
+
+    public Node getNode()
+    {
+        return this.node;
     }
 
 }

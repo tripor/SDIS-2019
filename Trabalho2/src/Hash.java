@@ -14,7 +14,7 @@ public class Hash {
     public static String hashBytes(byte[] bytes)
     {
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-1");
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
 
             byte[] messageDigest = md.digest(bytes);
 
@@ -22,7 +22,7 @@ public class Hash {
 
             String hashtext = no.toString(16);
 
-            while(hashtext.length() < 32)
+            while(hashtext.length() < 64)
             {
                 hashtext = "0" + hashtext;
             }
@@ -33,6 +33,11 @@ public class Hash {
             System.err.println("Something went wrong will trying to hash");
             return null;
         }
+    }
+
+    public static String bytesToString(byte[] bytes)
+    {
+        return new String(bytes);
     }
 
     public static String hashBytes(int toHash)
