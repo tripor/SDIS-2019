@@ -77,7 +77,7 @@ public class Server {
         {
             try {
                 TcpMessage message = new TcpMessage(this.address,this.port);
-                message.sendData("ola");
+                message.receiveData();
             } catch (Exception e) {
                 //TODO: handle exception
             }

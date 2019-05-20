@@ -52,6 +52,16 @@ public class TcpMessage {
     }
 
 
+    public byte[] receiveData() throws IOException
+    {
+        ByteBuffer buf = ByteBuffer.allocate(48);
+
+        int bytesRead = this.socketChannel.read(buf);
+
+        return null;
+    }
+
+
     public void close() throws IOException
     {
         this.socketChannel.close();
