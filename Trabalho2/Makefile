@@ -5,7 +5,7 @@ arguments=
 
 
 all: compile
-	java -classpath $(SRC_BIN) src.Server $(arguments)
+	java -ea -classpath $(SRC_BIN) src.Server $(arguments)
 
 compile:
 	if [ ! -d "$(SRC_BIN)" ]; then \
