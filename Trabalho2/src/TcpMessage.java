@@ -26,6 +26,11 @@ public class TcpMessage {
         this.socketChannel.connect(address);
         this.socketChannel.configureBlocking(false);
     }
+    public TcpMessage(SocketChannel socket) throws IOException
+    {
+        this.socketChannel = socket;
+        this.socketChannel.configureBlocking(false);
+    }
 
 
     public void sendData(byte[] data) throws InterruptedException,IOException
@@ -65,6 +70,7 @@ public class TcpMessage {
             list.add(buf);
             listSize.add(bytesRead);
         }
+        if(totalBytesRead < 0) totalBytesRead=0;
         byte[] devolver = new byte[totalBytesRead];
         int position=0;
         for(int i=0;i<list.size();i++)

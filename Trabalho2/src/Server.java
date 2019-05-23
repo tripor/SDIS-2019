@@ -9,7 +9,9 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class Server {
     public static void main(String[] args) {// aceitar ip de inicio peer e verificar se é o primeiro
@@ -32,6 +34,7 @@ public class Server {
     }
 
     public static ThreadPoolExecutor executor;
+    public static ScheduledThreadPoolExecutor scheduledExecutor;
     public static Server singleton;
 
     public Boolean serverRunning;
@@ -47,6 +50,7 @@ public class Server {
 
     public Server(int option, int port, String address, int anotherPort) {
         Server.executor = (ThreadPoolExecutor)Executors.newCachedThreadPool();
+        Server.scheduledExecutor = (ScheduledThreadPoolExecutor)Executors.newScheduledThreadPool(2);
         Server.singleton = this;
         this.port = port;
         this.option = option;
@@ -83,9 +87,13 @@ public class Server {
     public void run() {
         System.out.println("Setting up server...");
         try {
-            this.node = new Node(new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), this.port));
+            this.node = new Node(new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), this.tcpServer.getPort()));
             if(!this.isFirstServer())
+            {
+                System.out.println("Trying to join chord ring");
                 this.node.join(new InetSocketAddress(this.anotherAddress,this.anotherPort));
+                System.out.println("Chord ring joined");
+            }
         } catch (Exception e) {
             //TODO: handle exception
         }
@@ -101,6 +109,10 @@ public class Server {
             }
             return;
         }
+
+        Runnable ringMaintain = new RingMaintenance();
+        Server.scheduledExecutor.scheduleAtFixedRate(ringMaintain, 0, 3, TimeUnit.SECONDS);
+
         System.out.println("Server is running");
         this.serverRunning=true;
         try {

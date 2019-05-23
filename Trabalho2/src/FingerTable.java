@@ -12,7 +12,7 @@ public class FingerTable {
 
     public FingerTable() {
         this.fingerTable = new HashMap<Integer, InetSocketAddress>();
-        for (int i = 1; i <= 64; i++) {
+        for (int i = 1; i <= 32; i++) {
             this.fingerTable.put(i, null);
         }
     }
@@ -20,5 +20,10 @@ public class FingerTable {
     public InetSocketAddress getSuccessor()
     {
         return this.fingerTable.get(1);
+    }
+
+    public void setPosition(int position,InetSocketAddress address)
+    {
+        this.fingerTable.put(position, address);
     }
 }

@@ -1,5 +1,6 @@
 package src;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
@@ -13,6 +14,9 @@ public class MessageHandler implements Runnable {
     public static final char LF = 0xA;
     public static final String CRLF = "" + MessageHandler.CR + MessageHandler.LF;
     public static final String FINDSUCCESSOR = "FINDSUCCESSOR ?" + MessageHandler.CRLF;
+    public static final String IAMPREDECESSOR = "IAMPRE ? ?" + MessageHandler.CRLF;
+    public static final String OK = "OK" + MessageHandler.CRLF;
+    public static final String ERROR = "ERROR" + MessageHandler.CRLF;
 
     public static String subst(String regex, String... replaces)
     {
@@ -54,6 +58,25 @@ public class MessageHandler implements Runnable {
         return devolver;
     }
 
+    public Boolean sendResponse(String address,int port,String message)
+    {
+        try {
+            TcpMessage toSend = new TcpMessage(this.socketChannel);
+            toSend.sendData(message);
+            System.out.println("Response message " + message.trim() + " was send with success");
+        } catch (Exception e) {
+            System.err.println("Response message " + message.trim() + " couldn't be sent");
+            try {
+                TcpMessage toSend = new TcpMessage(this.socketChannel);
+                toSend.sendData(MessageHandler.ERROR);
+            } catch (Exception ee) {
+                return false;
+            }
+            return false;
+        }
+        return true;
+    }
+
     @Override
     public void run()
     {
@@ -61,7 +84,7 @@ public class MessageHandler implements Runnable {
         try {
             byte[] bytesReceived = this.receiveData();
             String stringReceived = Hash.bytesToString(bytesReceived);
-            System.out.println("\tMessage:-->" + stringReceived + "<--");
+            System.out.println("\tMessage:-->" + stringReceived.trim() + "<--");
             String[] splitedMessage = stringReceived.split(MessageHandler.CRLF);
             String header = splitedMessage[0];
             String[] splitedHeader = header.split(" ");
@@ -69,6 +92,13 @@ public class MessageHandler implements Runnable {
             {
                 String id = splitedHeader[1];
                 Server.singleton.getNode().findSuccessor(id);
+            }
+            else if(splitedHeader[0].equals("IAMPRE"))
+            {
+                String ip = splitedHeader[1];
+                int port = Integer.parseInt(splitedHeader[2]);
+                this.sendResponse(ip,port,MessageHandler.OK);
+                Server.singleton.getNode().hasPredecessor(new InetSocketAddress(ip, port));
             }
         } catch (Exception e) {
             //TODO: handle exception

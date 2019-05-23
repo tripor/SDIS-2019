@@ -34,6 +34,22 @@ public class Hash {
             return null;
         }
     }
+    public static long hashBytesInteger(byte[] bytes)
+    {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+
+            byte[] messageDigest = md.digest(bytes);
+
+            BigInteger no = new BigInteger(1,messageDigest);
+
+            return no.longValue();
+            
+        } catch (NoSuchAlgorithmException e) {
+            System.err.println("Something went wrong will trying to hash");
+            return 0;
+        }
+    }
 
     public static String bytesToString(byte[] bytes)
     {
@@ -45,5 +61,42 @@ public class Hash {
         ByteBuffer b = ByteBuffer.allocate(4);
         b.putInt(toHash);
         return Hash.hashBytes(b.array());
+    }
+    public static long hashBytesInteger(int toHash)
+    {
+        ByteBuffer b = ByteBuffer.allocate(4);
+        b.putInt(toHash);
+        return Math.abs(Hash.hashBytesInteger(b.array()));
+    }
+
+    
+    public static long difference(long a,long b)
+    {
+        long dif = a - b;
+        if(dif < 0)
+        {
+            dif += Math.pow(2, 64);
+        }
+        return dif;
+    }
+
+    public static Boolean isBetween(long start,long test,long end)
+    {
+        if(start > end)
+        {
+            if(start < test)
+                return true;
+            else if( end > test)
+                return true;
+            else
+                return false;
+        }
+        else
+        {
+            if(start < test  && test < end)
+                return true;
+            else
+                return false;
+        }
     }
 }
