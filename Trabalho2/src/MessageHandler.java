@@ -17,6 +17,10 @@ public class MessageHandler implements Runnable {
     public static final String IAMPREDECESSOR = "IAMPRE ? ?" + MessageHandler.CRLF;
     public static final String OK = "OK" + MessageHandler.CRLF;
     public static final String ERROR = "ERROR" + MessageHandler.CRLF;
+    public static final String ALIVE = "ALIVE" + MessageHandler.CRLF;
+    public static final String YOURPRE = "YOURPRE" + MessageHandler.CRLF;
+    public static final String MYPRE = "MYPRE ? ?" + MessageHandler.CRLF;
+
 
     public static String subst(String regex, String... replaces)
     {
@@ -61,6 +65,25 @@ public class MessageHandler implements Runnable {
     public Boolean sendResponse(String address,int port,String message)
     {
         try {
+            TcpMessage toSend = new TcpMessage(address,port);
+            toSend.sendData(message);
+            System.out.println("Response message " + message.trim() + " was send with success");
+        } catch (Exception e) {
+            System.err.println("Response message " + message.trim() + " couldn't be sent");
+            try {
+                TcpMessage toSend = new TcpMessage(this.socketChannel);
+                toSend.sendData(MessageHandler.ERROR);
+            } catch (Exception ee) {
+                return false;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    public Boolean sendResponse(String message)
+    {
+        try {
             TcpMessage toSend = new TcpMessage(this.socketChannel);
             toSend.sendData(message);
             System.out.println("Response message " + message.trim() + " was send with success");
@@ -75,6 +98,11 @@ public class MessageHandler implements Runnable {
             return false;
         }
         return true;
+    }
+
+    public void close() throws IOException
+    {
+        this.socketChannel.close();
     }
 
     @Override
@@ -97,11 +125,28 @@ public class MessageHandler implements Runnable {
             {
                 String ip = splitedHeader[1];
                 int port = Integer.parseInt(splitedHeader[2]);
-                this.sendResponse(ip,port,MessageHandler.OK);
+                this.sendResponse(MessageHandler.OK);
                 Server.singleton.getNode().hasPredecessor(new InetSocketAddress(ip, port));
             }
+            else if(splitedHeader[0].equals("ALIVE"))
+            {
+                this.sendResponse(MessageHandler.OK);
+            }
+            else if(splitedHeader[0].equals("YOURPRE"))
+            {
+                InetSocketAddress pre= Server.singleton.getNode().getPreAddress();
+                if(pre!=null)
+                    this.sendResponse(MessageHandler.subst(MessageHandler.MYPRE,pre.getHostName(),Integer.toString(pre.getPort())));
+                else
+                    this.sendResponse(MessageHandler.subst(MessageHandler.MYPRE,"null","0"));
+            }
         } catch (Exception e) {
-            //TODO: handle exception
+            this.sendResponse(MessageHandler.ERROR);
+        }
+        try {
+            this.socketChannel.close();
+        } catch (Exception e) {
+            System.err.println("A error has ocurred while trying close a tcp connection");
         }
     }
 }

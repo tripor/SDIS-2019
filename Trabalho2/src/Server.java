@@ -110,7 +110,7 @@ public class Server {
             return;
         }
 
-        Runnable ringMaintain = new RingMaintenance();
+        Runnable ringMaintain = new RingMaintenance(this.node);
         Server.scheduledExecutor.scheduleAtFixedRate(ringMaintain, 0, 3, TimeUnit.SECONDS);
 
         System.out.println("Server is running");

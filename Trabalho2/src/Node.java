@@ -1,4 +1,5 @@
 package src;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 /**
@@ -29,13 +30,13 @@ public class Node {
         assert anotherServer != null;
         try {
             TcpMessage message = new TcpMessage(anotherServer);
-            //find successor
             message.sendData(MessageHandler.subst(MessageHandler.IAMPREDECESSOR,this.self.getHostString(),Integer.toString(this.self.getPort())));
             String response = new String(message.receiveData());
             if(response.startsWith("ERROR"))
             {
                 throw new Exception();
             }
+            this.fingerTable.setPosition(1,anotherServer);
         } catch (Exception e) {
             System.err.println("A error has ocurred while trying to join the ring");
             e.printStackTrace();
@@ -49,6 +50,9 @@ public class Node {
         if(this.predecessor==null)
         {
             this.predecessor=pre;
+            System.out.println("A new predecessor was set up. Details: ");
+            System.out.println("\tIp: "+pre.getHostName());
+            System.out.println("\tPort: "+pre.getPort());
         }
         else
         {
@@ -57,6 +61,9 @@ public class Node {
             if(Hash.isBetween(predecessorId, preId, this.selfIdInteger))
             {
                 this.predecessor=pre;
+                System.out.println("A new predecessor was set up. Details: ");
+                System.out.println("\tIp: "+pre.getHostName());
+                System.out.println("\tPort: "+pre.getPort());
             }
         }
     }
@@ -73,6 +80,20 @@ public class Node {
             return this.fingerTable.getSuccessor();
         else if(this.predecessor!=null)
         {
+            try {
+                //Verificar se o predecedor estar vivo
+                TcpMessage test = new TcpMessage(this.predecessor);
+                test.sendData(MessageHandler.ALIVE);
+                String response = new String(test.receiveData());
+                if(!response.startsWith("OK"))
+                {
+                    throw new Exception();
+                }
+                test.close();
+            } catch (Exception e) {
+                this.predecessor=null;
+                return null;
+            }
             this.fingerTable.setPosition(1,this.predecessor);
             return this.fingerTable.getSuccessor();
         }
@@ -83,4 +104,37 @@ public class Node {
     {
         return this.fingerTable;
     }
+
+    public InetSocketAddress getSelfAddress()
+    {
+        return this.self;
+    }
+    public long getSelfAddressInteger()
+    {
+        return this.selfIdInteger;
+    }
+
+    public InetSocketAddress getPreAddress()
+    {
+        try {
+            //Verificar se o predecedor estar vivo
+            TcpMessage test = new TcpMessage(this.predecessor);
+            test.sendData(MessageHandler.ALIVE);
+            String response = new String(test.receiveData());
+            if(!response.startsWith("OK"))
+            {
+                throw new Exception();
+            }
+            test.close();
+        } catch (Exception e) {
+            this.predecessor=null;
+            return null;
+        }
+        return this.predecessor;
+    }
+    public void deletePre()
+    {
+        this.predecessor=null;
+    }
+
 }
