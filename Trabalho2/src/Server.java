@@ -118,7 +118,7 @@ public class Server {
         try {
             while(this.serverRunning)
             {
-                System.out.println("Listening...");
+                Colours.printCyan("Listening...\n");
                 SocketChannel sc = this.tcpServer.acceptConnection();
                 Runnable messageHandler = new MessageHandler(sc);
                 Server.executor.submit(messageHandler);

@@ -20,8 +20,8 @@ public class Node {
         this.self=self;
         this.selfId = Hash.hashBytes(self.hashCode()+self.getPort());
         this.selfIdInteger = Hash.hashBytesInteger(self.hashCode()+self.getPort());
-        System.out.println("Node created with id: " + this.selfId + " length:" + this.selfId.length());
-        System.out.println("Corresponding value of id is: " + this.selfIdInteger);
+        Colours.printCyan("Node created with id: " + this.selfId + " length:" + this.selfId.length()+"\n");
+        Colours.printCyan("Corresponding value of id is: " + this.selfIdInteger+"\n");
         this.fingerTable = new FingerTable();
     }
 
@@ -38,7 +38,7 @@ public class Node {
             }
             this.fingerTable.setPosition(1,anotherServer);
         } catch (Exception e) {
-            System.err.println("A error has ocurred while trying to join the ring");
+            Colours.printRed("A error has ocurred while trying to join the ring\n");
             e.printStackTrace();
             System.exit(2);
         }
@@ -50,9 +50,11 @@ public class Node {
         if(this.predecessor==null)
         {
             this.predecessor=pre;
-            System.out.println("A new predecessor was set up. Details: ");
-            System.out.println("\tIp: "+pre.getHostName());
-            System.out.println("\tPort: "+pre.getPort());
+            Colours.printCyan("A new predecessor was set up. Details: \n");
+            Colours.printCyan("\tIp: ");
+            System.out.println(pre.getHostName());
+            Colours.printCyan("\tPort: ");
+            System.out.println(pre.getPort());
         }
         else
         {
@@ -61,9 +63,11 @@ public class Node {
             if(Hash.isBetween(predecessorId, preId, this.selfIdInteger))
             {
                 this.predecessor=pre;
-                System.out.println("A new predecessor was set up. Details: ");
-                System.out.println("\tIp: "+pre.getHostName());
-                System.out.println("\tPort: "+pre.getPort());
+                Colours.printCyan("A new predecessor was set up. Details: \n");
+                Colours.printCyan("\tIp: ");
+                System.out.println(pre.getHostName());
+                Colours.printCyan("\tPort: ");
+                System.out.println(pre.getPort());
             }
         }
     }

@@ -67,9 +67,13 @@ public class MessageHandler implements Runnable {
         try {
             TcpMessage toSend = new TcpMessage(address,port);
             toSend.sendData(message);
-            System.out.println("Response message " + message.trim() + " was send with success");
+            Colours.printGreen("Response message ");
+            System.out.print(message.trim());
+            Colours.printGreen(" was send with success\n");
         } catch (Exception e) {
-            System.err.println("Response message " + message.trim() + " couldn't be sent");
+            Colours.printRed("Response message ");
+            System.out.print(message.trim());
+            Colours.printRed(" couldn't be sent\n");
             try {
                 TcpMessage toSend = new TcpMessage(this.socketChannel);
                 toSend.sendData(MessageHandler.ERROR);
@@ -86,9 +90,13 @@ public class MessageHandler implements Runnable {
         try {
             TcpMessage toSend = new TcpMessage(this.socketChannel);
             toSend.sendData(message);
-            System.out.println("Response message " + message.trim() + " was send with success");
+            Colours.printGreen("Response message ");
+            System.out.print(message.trim());
+            Colours.printGreen(" was send with success\n");
         } catch (Exception e) {
-            System.err.println("Response message " + message.trim() + " couldn't be sent");
+            Colours.printRed("Response message ");
+            System.out.print(message.trim());
+            Colours.printRed(" couldn't be sent\n");
             try {
                 TcpMessage toSend = new TcpMessage(this.socketChannel);
                 toSend.sendData(MessageHandler.ERROR);
@@ -108,11 +116,13 @@ public class MessageHandler implements Runnable {
     @Override
     public void run()
     {
-        System.out.println("Received a message");
+        Colours.printGreen("Received a message\n");
         try {
             byte[] bytesReceived = this.receiveData();
             String stringReceived = Hash.bytesToString(bytesReceived);
-            System.out.println("\tMessage:-->" + stringReceived.trim() + "<--");
+            Colours.printGreen("\tMessage:-->");
+            System.out.print(stringReceived.trim());
+            Colours.printGreen("<--\n");
             String[] splitedMessage = stringReceived.split(MessageHandler.CRLF);
             String header = splitedMessage[0];
             String[] splitedHeader = header.split(" ");
@@ -146,7 +156,7 @@ public class MessageHandler implements Runnable {
         try {
             this.socketChannel.close();
         } catch (Exception e) {
-            System.err.println("A error has ocurred while trying close a tcp connection");
+            Colours.printRed("A error has ocurred while trying close a tcp connection\n");
         }
     }
 }

@@ -18,11 +18,11 @@ public class RingMaintenance implements Runnable {
     @Override
     public void run()
     {
-        System.out.println("\n-->Starting ring maintenance");
+        Colours.printBlue("\n-->Starting ring maintenance\n");
         InetSocketAddress succ = this.belongs.getSuccessor();
         if(succ==null)
         {
-            System.out.println("This server is alone in the ring");
+            Colours.printBlue("This server is alone in the ring\n");
         }
         else
         {
@@ -40,39 +40,44 @@ public class RingMaintenance implements Runnable {
                     try {
                         channel.close();
                     } catch (Exception e) {
-                        System.out.println("A error has ocurred while trying to close a tcp connection");
+                        Colours.printRed("A error has ocurred while trying to close a tcp connection\n");
                     }
                 } catch (Exception e) {
                     //Caso o sucessor não esteja vivo ir buscar a finger table um sucessor
-                    System.out.println("Successor is no longer alive. Getting next successor");
+                    Colours.printBlue("Successor is no longer alive. Getting next successor\n");
                     this.belongs.getFingerTable().overridePosition(1,null);
                     this.belongs.getFingerTable().fixPositions();
                     succ = this.belongs.getSuccessor();
                     if(succ == null)
                     {
                         //Caso não haja mais sucessores
-                        System.out.println("There is no new successor available");
+
+                        Colours.printBlue("There is no new successor available\n");
                         break;
                     }
-                    System.out.println("New successor was set up. Details: ");
-                    System.out.println("\tIp address:- " + succ.getHostName());
-                    System.out.println("\tPort:- " + succ.getPort());
+                    Colours.printBlue("New successor was set up. Details: \n");
+                    Colours.printBlue("\tIp address:- ");
+                    System.out.println(succ.getHostName());
+                    Colours.printBlue("\tPort:- ");
+                    System.out.println(succ.getPort());
                 }
             } while (channel == null);
             if(channel == null)
             {
                 //Caso de não haver mais sucessores
-                System.out.println("-->Ring maintenance has ended");
+                Colours.printBlue("-->Ring maintenance has ended\n");
                 return;
             }
             try {
                 //Perguntar ao successor qual é o seu predecedor
                 channel = new TcpMessage(succ);
-                System.out.println("Asking what the predecessor of the successor is");
+                Colours.printBlue("Asking what the predecessor of the successor is\n");
                 channel.sendData(MessageHandler.YOURPRE);
                 byte[] responseBytes = channel.receiveData();
                 String response = new String(responseBytes);
-                System.out.println("\tResponse:-->" + response.trim() + "<--");
+                Colours.printBlue("\tResponse:-->");
+                System.out.print(response.trim());
+                Colours.printBlue("<--\n");
                 String[] splitedMessage = response.split(MessageHandler.CRLF);
                 String header = splitedMessage[0];
                 String[] splitedHeader = header.split(" ");
@@ -84,7 +89,7 @@ public class RingMaintenance implements Runnable {
                     if(ip.equals("null"))
                     {
                         //Notificar que eu sou o predecessor dele
-                        System.out.println("Notifying that I'm the predecessor of the successor");
+                        Colours.printBlue("Notifying that I'm the predecessor of the successor\n");
                         try {
                             InetSocketAddress self = this.belongs.getSelfAddress();
                             channel = new TcpMessage(succ);
@@ -96,7 +101,7 @@ public class RingMaintenance implements Runnable {
                             }
                             channel.close();
                         } catch (Exception e) {
-                            System.err.println("A error has ocurred while trying to notify the successor that I'm his predecessor");
+                            Colours.printRed("A error has ocurred while trying to notify the successor that I'm his predecessor\n");
                         }
                     }
                     else
@@ -119,13 +124,15 @@ public class RingMaintenance implements Runnable {
                                         throw new Exception();
                                     }
                                     this.belongs.getFingerTable().setPosition(1,address);
-                                    System.out.println("A new successor was set up. Details: ");
-                                    System.out.println("\tIp address:- " + ip);
-                                    System.out.println("\tPort:- " + port);
+                                    Colours.printBlue("A new successor was set up. Details: \n");
+                                    Colours.printBlue("\tIp address:- ");
+                                    System.out.println(ip);
+                                    Colours.printBlue("\tPort:- ");
+                                    System.out.println(port);
                                     channel.close();
 
                                 } catch (Exception e) {
-                                    System.err.println("A error has ocurred while trying to set up a new successor.");
+                                    Colours.printRed("A error has ocurred while trying to set up a new successor.\n");
                                 }
 
                             }
@@ -138,10 +145,10 @@ public class RingMaintenance implements Runnable {
                 }
                 
             } catch (Exception e) {
-                System.err.println("A error has ocurred while trying to be the successor predecessor");
+                Colours.printRed("A error has ocurred while trying to be the successor predecessor\n");
             }
         }
-        System.out.println("-->Ring maintenance has ended");
+        Colours.printBlue("-->Ring maintenance has ended\n");
     }
 
 }
