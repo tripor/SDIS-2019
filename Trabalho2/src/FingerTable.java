@@ -19,6 +19,7 @@ public class FingerTable {
     }
 
     public synchronized InetSocketAddress getSuccessor() {
+        this.fixPositions();
         return this.fingerTable.get(1);
     }
 
@@ -60,4 +61,15 @@ public class FingerTable {
         }
         this.fingerTable=newTable;
     }
+
+    public int getM()
+    {
+        return this.m;
+    }
+
+    public InetSocketAddress getPosition(int i)
+    {
+        return this.fingerTable.get(i);
+    }
 }
+

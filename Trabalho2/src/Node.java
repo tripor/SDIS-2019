@@ -1,5 +1,5 @@
 package src;
-import java.io.IOException;
+
 import java.net.InetSocketAddress;
 
 /**
@@ -72,8 +72,35 @@ public class Node {
         }
     }
 
-    public InetSocketAddress findSuccessor(String id)
+    public InetSocketAddress findSuccessor(long id)
     {
+        Colours.printCyan("Finding successor of id: " + id + "\n");
+        InetSocketAddress succ = this.getSuccessor();
+        if(succ==null)
+        {
+            Colours.printCyan("This node is alone in the ring so the successor of id " + id + " is this node\n");
+            return this.self;
+        }
+        long succID = Hash.hashBytesInteger(succ.hashCode()+succ.getPort());
+        if(this.predecessor!=null)
+        {
+            long predecessorId = Hash.hashBytesInteger(this.predecessor.hashCode()+this.predecessor.getPort());
+            if(Hash.isBetween(predecessorId, id, this.selfIdInteger))
+            {
+                Colours.printCyan("Successor of id: " + id + " is this node with id : " + this.selfIdInteger + "\n");
+                return this.self;
+            }
+        }
+        else if(Hash.isBetween(this.selfIdInteger, id, succID))
+        {
+            Colours.printCyan("Successor of id: " + id + " is the successor of this node with id: " + succID + "\n");
+            return succ;
+        }
+        else
+        {
+
+        }
+
         return null;
     }
 

@@ -35,4 +35,8 @@ public class Colours {
     {
         System.out.print(ANSI_CYAN + message + ANSI_RESET);
     }
+    public static void printPurple(String message)
+    {
+        System.out.print(ANSI_PURPLE + message + ANSI_RESET);
+    }
 }

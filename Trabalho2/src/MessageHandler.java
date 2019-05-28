@@ -128,7 +128,7 @@ public class MessageHandler implements Runnable {
             String[] splitedHeader = header.split(" ");
             if(splitedHeader[0].equals("FINDSUCCESSOR"))
             {
-                String id = splitedHeader[1];
+                long id = Long.parseLong(splitedHeader[1]);
                 Server.singleton.getNode().findSuccessor(id);
             }
             else if(splitedHeader[0].equals("IAMPRE"))
