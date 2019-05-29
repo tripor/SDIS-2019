@@ -45,7 +45,6 @@ public class RingMaintenance implements Runnable {
                     //Caso o sucessor não esteja vivo ir buscar a finger table um sucessor
                     Colours.printBlue("Successor is no longer alive. Getting next successor\n");
                     this.belongs.getFingerTable().overridePosition(1,null);
-                    this.belongs.getFingerTable().fixPositions();
                     succ = this.belongs.getSuccessor();
                     if(succ == null)
                     {

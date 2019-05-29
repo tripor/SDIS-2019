@@ -111,7 +111,7 @@ public class Server {
         }
 
         Runnable ringMaintain = new RingMaintenance(this.node);
-        Server.scheduledExecutor.scheduleAtFixedRate(ringMaintain, 0, 3, TimeUnit.SECONDS);
+        Server.scheduledExecutor.scheduleAtFixedRate(ringMaintain, 0, 10, TimeUnit.SECONDS);
         Runnable fingerTableMaintain = new FingerTableMaintenance(this.node);
         Server.scheduledExecutor.scheduleAtFixedRate(fingerTableMaintain, 0, 2, TimeUnit.SECONDS);
 

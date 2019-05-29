@@ -1,11 +1,14 @@
 package src;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 
 /**
  * Node
  */
 public class Node {
+
+    private ArrayList<Long> finding;
 
     private InetSocketAddress self;
     private String selfId;
@@ -17,6 +20,7 @@ public class Node {
     public Node(InetSocketAddress self)
     {
         this.predecessor=null;
+        this.finding = new ArrayList<Long>();
         this.self=self;
         this.selfId = Hash.hashBytes(self.hashCode()+self.getPort());
         this.selfIdInteger = Hash.hashBytesInteger(self.hashCode()+self.getPort());
@@ -34,9 +38,11 @@ public class Node {
             String response = new String(message.receiveData());
             if(response.startsWith("ERROR"))
             {
+                message.close();
                 throw new Exception();
             }
             this.fingerTable.setPosition(1,anotherServer);
+            message.close();
         } catch (Exception e) {
             Colours.printRed("A error has ocurred while trying to join the ring\n");
             e.printStackTrace();
@@ -82,14 +88,10 @@ public class Node {
             return this.self;
         }
         long succID = Hash.hashBytesInteger(succ.hashCode()+succ.getPort());
-        if(this.predecessor!=null)
+        if(this.predecessor!=null && Hash.isBetween(Hash.hashBytesInteger(this.predecessor.hashCode()+this.predecessor.getPort()), id, this.selfIdInteger))
         {
-            long predecessorId = Hash.hashBytesInteger(this.predecessor.hashCode()+this.predecessor.getPort());
-            if(Hash.isBetween(predecessorId, id, this.selfIdInteger))
-            {
-                Colours.printCyan("Successor of id: " + id + " is this node with id : " + this.selfIdInteger + "\n");
-                return this.self;
-            }
+            Colours.printCyan("Successor of id: " + id + " is this node with id : " + this.selfIdInteger + "\n");
+            return this.self;
         }
         else if(Hash.isBetween(this.selfIdInteger, id, succID))
         {
@@ -98,10 +100,53 @@ public class Node {
         }
         else
         {
-
+            InetSocketAddress closestPrec = this.closestPrecedingNode(id);
+            if(closestPrec.equals(this.self))
+            {
+                Colours.printCyan("Successor of id: " + id + " is this node\n");
+                return this.self;
+            }
+            else
+            {
+                Colours.printCyan("Asking the closest predecessor of " + id +" to find the successor\n");
+                try {
+                    this.finding.add(id);
+                    TcpMessage findSucc = new TcpMessage(closestPrec);
+                    findSucc.sendData(MessageHandler.subst(MessageHandler.FINDSUCCESSOR, Long.toString(id)));
+                    String response = new String(findSucc.receiveData());
+                    Colours.printCyan("\tMessage:-->");
+                    System.out.print(response.trim());
+                    Colours.printCyan("<--\n");
+                    String[] splitedMessage = response.split(MessageHandler.CRLF);
+                    String header = splitedMessage[0];
+                    String[] splitedHeader = header.split(" ");
+                    InetSocketAddress devolver = null;
+                    if(!splitedHeader[0].equals("SUCC"))
+                    {
+                        Colours.printCyan("The closest predecessor didn't find the successor of "+id+"\n");
+                    }
+                    else
+                    {
+                        String ip = splitedHeader[1];
+                        int port = Integer.parseInt(splitedHeader[2]);
+                        devolver= new InetSocketAddress(ip, port);
+                    }
+                    findSucc.close();
+                    this.finding.remove(id);
+                    return devolver;
+                } catch (Exception e) {
+                    e.printStackTrace();//TODO acontece um erro aqui
+                    Colours.printRed("A error has ocurred while trying ask the successor of "+ id + "\n");
+                }
+            }
         }
 
         return null;
+    }
+
+    public InetSocketAddress closestPrecedingNode(long id)
+    {
+        return this.fingerTable.closestPrecedingNode(id);
     }
 
     public InetSocketAddress getSuccessor()
@@ -167,5 +212,11 @@ public class Node {
     {
         this.predecessor=null;
     }
+    public Boolean isSearchingId(long id)
+    {
+        return this.finding.contains(id);
+    }
+
+
 
 }

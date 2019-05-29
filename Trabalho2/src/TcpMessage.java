@@ -61,12 +61,16 @@ public class TcpMessage {
         ByteBuffer buf = ByteBuffer.allocate(2048);
         int bytesRead;
         int totalBytesRead=0;
-        ArrayList<ByteBuffer> list = new ArrayList<ByteBuffer>();
+        ArrayList<byte[]> list = new ArrayList<byte[]>();
         ArrayList<Integer> listSize = new ArrayList<Integer>();
-        while ((bytesRead = this.socketChannel.read(buf)) > 0 || list.size()==0) {
+        while ((bytesRead = this.socketChannel.read(buf)) != -1 ) {
             if(bytesRead==0)continue;
             totalBytesRead += bytesRead;
-            list.add(buf);
+            buf.flip();
+            byte[] add = new byte[bytesRead];
+            System.arraycopy(buf.array(),0,add,0,bytesRead);
+            list.add(add);
+            buf.clear();
             listSize.add(bytesRead);
         }
         if(totalBytesRead < 0) totalBytesRead=0;
@@ -74,7 +78,7 @@ public class TcpMessage {
         int position=0;
         for(int i=0;i<list.size();i++)
         {
-            System.arraycopy(list.get(i).array(), 0, devolver, position, listSize.get(i));
+            System.arraycopy(list.get(i), 0, devolver, position, listSize.get(i));
             position+=listSize.get(i);
         }
         return devolver;

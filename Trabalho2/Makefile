@@ -7,6 +7,9 @@ arguments=
 all: compile
 	java -ea -classpath $(SRC_BIN) src.Server $(arguments)
 
+client: compile
+	java -ea -classpath $(SRC_BIN) src.Client $(arguments)
+
 compile:
 	if [ ! -d "$(SRC_BIN)" ]; then \
 		mkdir $(SRC_BIN); \
@@ -15,6 +18,8 @@ compile:
 
 $(SRC_FILES):
 	compile
+
+
 
 clean:
 	rm -r ./bin

@@ -9,7 +9,7 @@ import java.util.HashMap;
 public class FingerTable {
 
     private HashMap<Integer, InetSocketAddress> fingerTable;
-    private final int m=32;
+    private final int m=64;
 
     public FingerTable() {
         this.fingerTable = new HashMap<Integer, InetSocketAddress>();
@@ -19,8 +19,20 @@ public class FingerTable {
     }
 
     public synchronized InetSocketAddress getSuccessor() {
-        this.fixPositions();
-        return this.fingerTable.get(1);
+        //TODO check is alive
+        InetSocketAddress succ =this.fingerTable.get(1);
+        if(succ==null)
+        {
+            for (int i = 1; i <= this.m; i++) {
+                succ = this.fingerTable.get(i);
+                if (succ != null) {
+                    this.fingerTable.put(1,succ);
+                    this.fingerTable.put(i,null);
+                    return succ;
+                }
+            }
+        }
+        return succ;
     }
 
     public synchronized void overridePosition(int position, InetSocketAddress address)
@@ -46,20 +58,22 @@ public class FingerTable {
         }
     }
 
-    public synchronized void fixPositions() {
-        HashMap<Integer, InetSocketAddress> newTable = new HashMap<Integer, InetSocketAddress>();
-        int j = 1;
-        for (int i = 1; i <= this.m; i++) {
-            InetSocketAddress value = this.fingerTable.get(1);
-            if (value != null) {
-                newTable.put(j, value);
-                j++;
+    public synchronized InetSocketAddress closestPrecedingNode(long id)
+    {
+        for(int i=this.m;i>=1;i--)
+        {
+            InetSocketAddress position = this.fingerTable.get(i);
+            if(position==null)continue;
+            long tableId = Hash.hashBytesInteger(position.hashCode()+position.getPort());
+            System.out.println(Server.singleton.getNode().getSelfAddressInteger());
+            System.out.println(tableId);
+            System.out.println(id);
+            if(Hash.isBetween(Server.singleton.getNode().getSelfAddressInteger(), tableId, id))
+            {
+                return position;
             }
         }
-        for (; j <= this.m; j++) {
-            newTable.put(j,null);
-        }
-        this.fingerTable=newTable;
+        return Server.singleton.getNode().getSelfAddress();
     }
 
     public int getM()
@@ -70,6 +84,19 @@ public class FingerTable {
     public InetSocketAddress getPosition(int i)
     {
         return this.fingerTable.get(i);
+    }
+
+    @Override
+    public synchronized String toString()
+    {
+        String devolver = new String();
+        for(int i=1;i<=this.m;i++)
+        {
+            InetSocketAddress ad = this.fingerTable.get(i);
+            if(ad!=null)
+                devolver+= "number: "+ i +" | ip: "+ ad.getHostName() + " | port: " + ad.getPort() + " | id: " + Hash.hashBytesInteger(ad.hashCode()+ad.getPort())+"\n";
+        }
+        return devolver;
     }
 }
 

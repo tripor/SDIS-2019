@@ -14,12 +14,15 @@ public class MessageHandler implements Runnable {
     public static final char LF = 0xA;
     public static final String CRLF = "" + MessageHandler.CR + MessageHandler.LF;
     public static final String FINDSUCCESSOR = "FINDSUCCESSOR ?" + MessageHandler.CRLF;
+    public static final String SUCC = "SUCC ? ?" + MessageHandler.CRLF;
     public static final String IAMPREDECESSOR = "IAMPRE ? ?" + MessageHandler.CRLF;
     public static final String OK = "OK" + MessageHandler.CRLF;
     public static final String ERROR = "ERROR" + MessageHandler.CRLF;
     public static final String ALIVE = "ALIVE" + MessageHandler.CRLF;
     public static final String YOURPRE = "YOURPRE" + MessageHandler.CRLF;
     public static final String MYPRE = "MYPRE ? ?" + MessageHandler.CRLF;
+    public static final String GETTABLE = "GETTABLE" + MessageHandler.CRLF;
+    public static final String TABLE = "TABLE" + MessageHandler.CRLF +"?";
 
 
     public static String subst(String regex, String... replaces)
@@ -129,7 +132,15 @@ public class MessageHandler implements Runnable {
             if(splitedHeader[0].equals("FINDSUCCESSOR"))
             {
                 long id = Long.parseLong(splitedHeader[1]);
-                Server.singleton.getNode().findSuccessor(id);
+                if(Server.singleton.getNode().isSearchingId(id))
+                {
+                    this.sendResponse(MessageHandler.ERROR);
+                }
+                else
+                {
+                    InetSocketAddress succ = Server.singleton.getNode().findSuccessor(id);
+                    this.sendResponse(MessageHandler.subst(MessageHandler.SUCC, succ.getHostName(),Integer.toString(succ.getPort())));
+                }
             }
             else if(splitedHeader[0].equals("IAMPRE"))
             {
@@ -149,6 +160,10 @@ public class MessageHandler implements Runnable {
                     this.sendResponse(MessageHandler.subst(MessageHandler.MYPRE,pre.getHostName(),Integer.toString(pre.getPort())));
                 else
                     this.sendResponse(MessageHandler.subst(MessageHandler.MYPRE,"null","0"));
+            }
+            else if(splitedHeader[0].equals("GETTABLE"))
+            {
+                this.sendResponse(MessageHandler.subst(MessageHandler.TABLE, Server.singleton.getNode().getFingerTable().toString()));
             }
         } catch (Exception e) {
             this.sendResponse(MessageHandler.ERROR);
