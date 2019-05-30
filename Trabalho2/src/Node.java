@@ -33,19 +33,22 @@ public class Node {
     {
         assert anotherServer != null;
         try {
-            TcpMessage message = new TcpMessage(anotherServer);
-            message.sendData(MessageHandler.subst(MessageHandler.IAMPREDECESSOR,this.self.getHostString(),Integer.toString(this.self.getPort())));
-            String response = new String(message.receiveData());
-            if(response.startsWith("ERROR"))
+            Messages message = new Messages(anotherServer);
+            if(!message.SendIamPredecessor(this.self.getHostString(),Integer.toString(this.self.getPort())))
             {
-                message.close();
                 throw new Exception();
             }
-            this.fingerTable.setPosition(1,anotherServer);
-            message.close();
+            else
+            {
+                this.fingerTable.setPosition(1, anotherServer);
+                Colours.printYellow("A new successor was set up. Details: \n");
+                Colours.printYellow("\tIp address:- ");
+                System.out.println(anotherServer.getHostName());
+                Colours.printYellow("\tPort:- ");
+                System.out.println(anotherServer.getPort());
+            }
         } catch (Exception e) {
             Colours.printRed("A error has ocurred while trying to join the ring\n");
-            e.printStackTrace();
             System.exit(2);
         }
     } 
@@ -87,8 +90,8 @@ public class Node {
             Colours.printCyan("This node is alone in the ring so the successor of id " + id + " is this node\n");
             return this.self;
         }
-        long succID = Hash.hashBytesInteger(succ.hashCode()+succ.getPort());
-        if(this.predecessor!=null && Hash.isBetween(Hash.hashBytesInteger(this.predecessor.hashCode()+this.predecessor.getPort()), id, this.selfIdInteger))
+        long succID = Hash.hashBytesInteger(succ);
+        if(this.predecessor!=null && Hash.isBetween(Hash.hashBytesInteger(this.predecessor), id, this.selfIdInteger))
         {
             Colours.printCyan("Successor of id: " + id + " is this node with id : " + this.selfIdInteger + "\n");
             return this.self;
@@ -101,7 +104,7 @@ public class Node {
         else
         {
             InetSocketAddress closestPrec = this.closestPrecedingNode(id);
-            if(closestPrec.equals(this.self))
+            if(closestPrec.equals(this.self) || closestPrec == null)
             {
                 Colours.printCyan("Successor of id: " + id + " is this node\n");
                 return this.self;
@@ -111,32 +114,15 @@ public class Node {
                 Colours.printCyan("Asking the closest predecessor of " + id +" to find the successor\n");
                 try {
                     this.finding.add(id);
-                    TcpMessage findSucc = new TcpMessage(closestPrec);
-                    findSucc.sendData(MessageHandler.subst(MessageHandler.FINDSUCCESSOR, Long.toString(id)));
-                    String response = new String(findSucc.receiveData());
-                    Colours.printCyan("\tMessage:-->");
-                    System.out.print(response.trim());
-                    Colours.printCyan("<--\n");
-                    String[] splitedMessage = response.split(MessageHandler.CRLF);
-                    String header = splitedMessage[0];
-                    String[] splitedHeader = header.split(" ");
-                    InetSocketAddress devolver = null;
-                    if(!splitedHeader[0].equals("SUCC"))
-                    {
-                        Colours.printCyan("The closest predecessor didn't find the successor of "+id+"\n");
-                    }
-                    else
-                    {
-                        String ip = splitedHeader[1];
-                        int port = Integer.parseInt(splitedHeader[2]);
-                        devolver= new InetSocketAddress(ip, port);
-                    }
-                    findSucc.close();
+                    Messages findSucc = new Messages(closestPrec);
+                    String[] splitedHeader = findSucc.SendFindSsuccessor(Long.toString(id));
+                    String ip = splitedHeader[1];
+                    int port = Integer.parseInt(splitedHeader[2]);
                     this.finding.remove(id);
-                    return devolver;
+                    return new InetSocketAddress(ip, port);
                 } catch (Exception e) {
-                    e.printStackTrace();//TODO acontece um erro aqui
-                    Colours.printRed("A error has ocurred while trying ask the successor of "+ id + "\n");
+                    this.finding.remove(id);
+                    Colours.printCyan("A error has ocurred while trying ask the successor of "+ id + ", maybe it's already searching for this id or it is not alive\n");
                 }
             }
         }
@@ -151,29 +137,7 @@ public class Node {
 
     public InetSocketAddress getSuccessor()
     {
-        InetSocketAddress succ = this.fingerTable.getSuccessor();
-        if(succ != null)
-            return this.fingerTable.getSuccessor();
-        else if(this.predecessor!=null)
-        {
-            try {
-                //Verificar se o predecedor estar vivo
-                TcpMessage test = new TcpMessage(this.predecessor);
-                test.sendData(MessageHandler.ALIVE);
-                String response = new String(test.receiveData());
-                if(!response.startsWith("OK"))
-                {
-                    throw new Exception();
-                }
-                test.close();
-            } catch (Exception e) {
-                this.predecessor=null;
-                return null;
-            }
-            this.fingerTable.setPosition(1,this.predecessor);
-            return this.fingerTable.getSuccessor();
-        }
-        return null;
+        return this.fingerTable.getSuccessor();
     }
 
     public FingerTable getFingerTable()
@@ -190,19 +154,31 @@ public class Node {
         return this.selfIdInteger;
     }
 
+    /**
+     * Checks if the currente predecessor is alive and returns it
+     * @return The predecessor if alive or null
+     */
     public InetSocketAddress getPreAddress()
     {
+        if(this.predecessor==null)
+        {
+            Colours.printCyan("Predeccessor is not set\n");
+            return null;
+        }
         try {
             //Verificar se o predecedor estar vivo
-            TcpMessage test = new TcpMessage(this.predecessor);
-            test.sendData(MessageHandler.ALIVE);
-            String response = new String(test.receiveData());
-            if(!response.startsWith("OK"))
+            Colours.printCyan("Checking if predeccessor is alive\n");
+            Messages message = new Messages(this.predecessor);
+            if(!message.SendAlive())
             {
                 throw new Exception();
             }
-            test.close();
+            else
+            {
+                Colours.printCyan("Predeccessor is alive\n");
+            }
         } catch (Exception e) {
+            Colours.printCyan("Predeccessor is not alive\n");
             this.predecessor=null;
             return null;
         }

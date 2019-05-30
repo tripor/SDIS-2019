@@ -22,31 +22,24 @@ public class FingerTableMaintenance implements Runnable {
     {
         Colours.printPurple("-->Starting Finger Table Maintenance for index "+index +"\n");
 
-        InetSocketAddress address = this.fingerTable.getPosition(index);
-        if(address == null)
+        Colours.printPurple("Index " + index + " on the finger table is null. Trying to find the successor\n");
+        long power = (long)(Math.pow(2, index-1));
+        long max = (long)(Math.pow(2, this.fingerTable.getM()));
+        long newValue =this.belongs.getSelfAddressInteger() + power;
+        if(newValue>=max||newValue<=0)
         {
-            Colours.printPurple("Index " + index + " on the finger table is null. Trying to find the successor\n");
-            long power = (long)(Math.pow(2, index-1));
-            long max = (long)(Math.pow(2, this.fingerTable.getM()));
-            long newValue =this.belongs.getSelfAddressInteger() + power;
-            if(newValue>=max||newValue<=0)
-            {
-                newValue = power-(max-this.belongs.getSelfAddressInteger());
-            }
-            InetSocketAddress succ = this.belongs.findSuccessor(newValue);
-            if(succ != null && !succ.equals(this.belongs.getSelfAddress()))
-            {
-                Colours.printPurple("The new successor of index " + index + " on the finger table is ip: "+succ.getHostName() +" port: "+succ.getPort() +"\n");
-                this.fingerTable.setPosition(index, succ);
-            }
-            //TODO melhorar isto para ver se há mais nodes no ring e mandar o index para o inicio
+            newValue = power-(max-this.belongs.getSelfAddressInteger());
+        }
+        InetSocketAddress succ = this.belongs.findSuccessor(newValue);
+        if(succ != null && !succ.equals(this.belongs.getSelfAddress()))//diferente de null e de mim
+        {
+            Colours.printPurple("The new successor of index " + index + " on the finger table is ip: "+succ.getHostName() +" port: "+succ.getPort() +"\n");   
+            this.fingerTable.replacePosition(index, succ);
         }
         else
         {
-            Colours.printPurple("Index "+ index + " on the finger table is set. Checking if it is alive\n");
-            //TODO
+            Colours.printPurple("The successor of index " + index + " is this node or an error has ocurred\n");   
         }
-        
         
         Colours.printPurple("-->Finger Table Maintenance for index "+index+" has ended\n\n");
 

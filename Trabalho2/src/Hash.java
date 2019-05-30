@@ -1,6 +1,7 @@
 package src;
 
 import java.math.BigInteger;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -66,6 +67,12 @@ public class Hash {
     {
         ByteBuffer b = ByteBuffer.allocate(4);
         b.putInt(toHash);
+        return Math.abs(Hash.hashBytesInteger(b.array()));
+    }
+    public static long hashBytesInteger(InetSocketAddress toHash)
+    {
+        ByteBuffer b = ByteBuffer.allocate(4);
+        b.putInt(toHash.hashCode()+toHash.getPort());
         return Math.abs(Hash.hashBytesInteger(b.array()));
     }
 
