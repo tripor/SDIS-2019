@@ -44,6 +44,7 @@ public class Server {
     private String anotherAddress;
     private int anotherPort;
     private Node node;
+    private Storage storage;
 
 
     private TcpServer tcpServer;
@@ -95,9 +96,9 @@ public class Server {
                 System.out.println("Chord ring joined");
             }
         } catch (Exception e) {
-            //TODO: handle exception
+            Colours.printRed("A error has ocurred while trying to create this node");
+            System.exit(1);
         }
-
 
         if(this.option == 3)
         {
@@ -112,8 +113,9 @@ public class Server {
 
         Runnable ringMaintain = new RingMaintenance(this.node);
         Server.scheduledExecutor.scheduleAtFixedRate(ringMaintain, 0, 10, TimeUnit.SECONDS);
-        Runnable fingerTableMaintain = new FingerTableMaintenance(this.node);
-        Server.scheduledExecutor.scheduleAtFixedRate(fingerTableMaintain, 0, 2, TimeUnit.SECONDS);
+        //Runnable fingerTableMaintain = new FingerTableMaintenance(this.node);
+        //Server.scheduledExecutor.scheduleAtFixedRate(fingerTableMaintain, 0, 2, TimeUnit.SECONDS);
+        this.storage=new Storage(this.node.getSelfAddressInteger());
 
         System.out.println("Server is running");
         this.serverRunning=true;
@@ -152,6 +154,11 @@ public class Server {
     public Node getNode()
     {
         return this.node;
+    }
+
+    public Storage getStorage()
+    {
+        return this.storage;
     }
 
 }

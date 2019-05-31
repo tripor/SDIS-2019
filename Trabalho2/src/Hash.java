@@ -31,7 +31,7 @@ public class Hash {
             return hashtext;
             
         } catch (NoSuchAlgorithmException e) {
-            System.err.println("Something went wrong will trying to hash");
+            Colours.printRed("Something went wrong will trying to hash\n");
             return null;
         }
     }
@@ -47,7 +47,7 @@ public class Hash {
             return no.longValue();
             
         } catch (NoSuchAlgorithmException e) {
-            System.err.println("Something went wrong will trying to hash");
+            Colours.printRed("Something went wrong will trying to hash\n");
             return 0;
         }
     }
@@ -73,6 +73,12 @@ public class Hash {
     {
         ByteBuffer b = ByteBuffer.allocate(4);
         b.putInt(toHash.hashCode()+toHash.getPort());
+        return Math.abs(Hash.hashBytesInteger(b.array()));
+    }
+    public static long hashBytesInteger(String toHash)
+    {
+        ByteBuffer b = ByteBuffer.allocate(4);
+        b.putInt(toHash.hashCode());
         return Math.abs(Hash.hashBytesInteger(b.array()));
     }
 

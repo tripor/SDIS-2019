@@ -23,7 +23,7 @@ public class Node {
         this.finding = new ArrayList<Long>();
         this.self=self;
         this.selfId = Hash.hashBytes(self.hashCode()+self.getPort());
-        this.selfIdInteger = Hash.hashBytesInteger(self.hashCode()+self.getPort());
+        this.selfIdInteger = Hash.hashBytesInteger(self);
         Colours.printCyan("Node created with id: " + this.selfId + " length:" + this.selfId.length()+"\n");
         Colours.printCyan("Corresponding value of id is: " + this.selfIdInteger+"\n");
         this.fingerTable = new FingerTable();
@@ -149,6 +149,10 @@ public class Node {
     {
         return this.self;
     }
+    /**
+     * Gets the id of this node encrypted with SHA-256 in a long type data
+     * @return This node self id in long type
+     */
     public long getSelfAddressInteger()
     {
         return this.selfIdInteger;

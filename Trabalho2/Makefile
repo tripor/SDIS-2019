@@ -14,7 +14,7 @@ compile:
 	if [ ! -d "$(SRC_BIN)" ]; then \
 		mkdir $(SRC_BIN); \
 	fi
-	javac -d $(SRC_BIN) -cp $(SRC_BIN) -s ./src $(SRC_FILES)
+	javac -Xlint:deprecation -d $(SRC_BIN) -cp $(SRC_BIN) -s ./src $(SRC_FILES)
 
 $(SRC_FILES):
 	compile
