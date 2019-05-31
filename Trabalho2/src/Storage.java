@@ -1,9 +1,9 @@
 package src;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.DirectoryStream;
@@ -21,6 +21,7 @@ public class Storage {
     private ArrayList<Long> files;
     private String serverPath = "./files/server/";
     private long currentSize;
+    private long maxSpace = 100000;
 
     public Storage(long serverId) {
         this.files = new ArrayList<Long>();
@@ -55,6 +56,11 @@ public class Storage {
         Colours.printYellow("Storing file: " + id + "\n");
         String filePath = this.serverPath + id;
         File file = new File(filePath);
+        if(this.contains(id))
+        {
+            this.files.remove(id);
+            this.currentSize-=file.length();
+        }
         file.createNewFile();
         RandomAccessFile aFile = new RandomAccessFile(filePath, "rw");
         FileChannel inChannel = aFile.getChannel();
@@ -67,6 +73,7 @@ public class Storage {
         }
         this.currentSize += inChannel.size();
         inChannel.close();
+        aFile.close();
         this.files.add(id);
         Colours.printYellow("Current size of storage: " + this.currentSize + " bytes\n");
     }
@@ -84,7 +91,9 @@ public class Storage {
         while (buf.hasRemaining()) {
             inChannel.write(buf);
         }
+        this.currentSize += inChannel.size();
         inChannel.close();
+        aFile.close();
     }
     
 
@@ -119,6 +128,7 @@ public class Storage {
             position+=listSize.get(i);
         }
         inChannel.close();
+        aFile.close();
         return devolver;
     }
     public byte[] read(String id) throws IOException
@@ -152,6 +162,7 @@ public class Storage {
             position+=listSize.get(i);
         }
         inChannel.close();
+        aFile.close();
         return devolver;
     }
 
@@ -160,11 +171,48 @@ public class Storage {
         Colours.printYellow("Deleting file: " + id + "\n");
         String filePath = this.serverPath + id;
         Path path = Paths.get(filePath);
+        this.currentSize -= Files.size(path);
         Files.delete(path);
         this.files.remove(id);
     }
     public Boolean contains(long id)
     {
         return this.files.contains(id);
+    }
+    public Boolean hasSpace(long size)
+    {
+        if(size+this.currentSize>this.maxSpace)
+            return false;
+        else
+            return true;
+    }
+
+    public Boolean reclaim(long space)
+    {
+        this.maxSpace=space;
+        while(this.currentSize>this.maxSpace)
+        {
+            if(files.size()==0) break;
+            long toRemove = this.files.get(0);
+            InetSocketAddress succ = Server.singleton.getNode().getSuccessor();  
+            try {
+                if(succ==null)
+                {
+                    Colours.printRed("File will be lost. Server has no space available for it and has no successor\n");
+                }
+                else
+                {
+                    Messages message = new Messages(succ);
+                    if(!message.SendStoreSpecial(toRemove, this.read(toRemove)))
+                    {
+                        Colours.printRed("File will be lost. No other server was able to save it\n");
+                    }
+                }
+                this.delete(toRemove);
+            } catch (Exception e) {
+                Colours.printRed("Error has ocurred while trying to delete\n");
+            }
+        }
+        return true;
     }
 }

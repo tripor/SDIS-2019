@@ -8,6 +8,7 @@ import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -48,6 +49,11 @@ public class Server {
 
 
     private TcpServer tcpServer;
+    
+    private ArrayList<Long> storeCycle;
+    private ArrayList<Long> getCycle;
+    private ArrayList<Long> removeCycle;
+    private ArrayList<Long> storeSpecialCycle;
 
     public Server(int option, int port, String address, int anotherPort) {
         Server.executor = (ThreadPoolExecutor)Executors.newCachedThreadPool();
@@ -57,6 +63,10 @@ public class Server {
         this.option = option;
         this.anotherAddress = address;
         this.anotherPort = anotherPort;
+        this.storeCycle = new ArrayList<Long>();
+        this.getCycle = new ArrayList<Long>();
+        this.removeCycle = new ArrayList<Long>();
+        this.storeSpecialCycle = new ArrayList<Long>();
         try {
             this.tcpServer = new TcpServer(port);
             System.out.println("Port used:- " + this.tcpServer.getPort());
@@ -100,21 +110,10 @@ public class Server {
             System.exit(1);
         }
 
-        if(this.option == 3)
-        {
-            try {
-                TcpMessage message = new TcpMessage(this.anotherAddress,this.anotherPort);
-                message.receiveData();
-            } catch (Exception e) {
-                //TODO: handle exception
-            }
-            return;
-        }
-
         Runnable ringMaintain = new RingMaintenance(this.node);
         Server.scheduledExecutor.scheduleAtFixedRate(ringMaintain, 0, 10, TimeUnit.SECONDS);
-        //Runnable fingerTableMaintain = new FingerTableMaintenance(this.node);
-        //Server.scheduledExecutor.scheduleAtFixedRate(fingerTableMaintain, 0, 2, TimeUnit.SECONDS);
+        Runnable fingerTableMaintain = new FingerTableMaintenance(this.node);
+        Server.scheduledExecutor.scheduleAtFixedRate(fingerTableMaintain, 0, 2, TimeUnit.SECONDS);
         this.storage=new Storage(this.node.getSelfAddressInteger());
 
         System.out.println("Server is running");
@@ -159,6 +158,23 @@ public class Server {
     public Storage getStorage()
     {
         return this.storage;
+    }
+    public ArrayList<Long> getStoreCycle()
+    {
+        return this.storeCycle;
+    }
+    public ArrayList<Long> getGetCycle()
+    {
+        return this.getCycle;
+    }
+    public ArrayList<Long> getRemoveCycle()
+    {
+        return this.removeCycle;
+    }
+
+    public ArrayList<Long> getStoreSpecialCycle()
+    {
+        return this.storeSpecialCycle;
     }
 
 }

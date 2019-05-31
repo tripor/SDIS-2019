@@ -120,6 +120,27 @@ public class Client {
             }
 
             break;
+        case "RECLAIM":
+            if (args.length == 4) {
+                long space = Long.parseLong(args[3]);
+                try {
+                    Messages message = new Messages(ip, port);
+                    if (message.SendReclaim(space)) {
+                        Colours.printBlue("Space reclaimed successfully\n");
+                    } else {
+                        Colours.printRed("Space couldn't be reclaimed\n");
+                    }
+                } catch (Exception e) {
+                    Colours.printRed("A error has ocurred while trying to communicate with the server\n");
+                    System.exit(2);
+                }
+            } else {
+                Colours.printRed(
+                        "\nArguments must be: RECLAIM <ip_adress of another server> <port of another server> <new_space>\n");
+                System.exit(1);
+            }
+
+            break;
         default:
             Colours.printRed("Option " + option + " doesn't exist\n");
             break;

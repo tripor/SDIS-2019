@@ -30,7 +30,6 @@ public class Messages {
     }
 
     public Boolean SendAlive() {
-        this.printScreenMessage("ALIVE");
         try {
             this.message.sendData(MessageHandler.ALIVE);
             String response = new String(this.message.receiveData());
@@ -38,9 +37,6 @@ public class Messages {
             if (!response.startsWith("OK")) {
                 return false;
             }
-            Colours.printGreen("Confirmation message to ");
-            System.out.print("ALIVE" );
-            Colours.printGreen(" received successfully\n");
             return true;
         } catch (Exception e) {
             return false;
@@ -48,7 +44,6 @@ public class Messages {
     }
 
     public String[] SendYourPre() throws Exception {
-        this.printScreenMessage("YOURPRE");
         this.message.sendData(MessageHandler.YOURPRE);
         byte[] responseBytes = this.message.receiveData();
         String response = new String(responseBytes);
@@ -57,9 +52,6 @@ public class Messages {
         String[] splitedHeader = header.split(" ");
         this.message.close();
         if (response.startsWith("MYPRE")) {
-            Colours.printGreen("Response to YOURPRE received -->");
-            System.out.print(response.trim());
-            Colours.printGreen("<--\n");
             return splitedHeader;
         } else {
             throw new Exception();
@@ -73,7 +65,6 @@ public class Messages {
      * @return true if everything went right or false if everything went wrong
      */
     public Boolean SendIamPredecessor(String... strings) {
-        this.printScreenMessage("IAMPREDECESSOR");
         try {
             this.message.sendData(MessageHandler.subst(MessageHandler.IAMPREDECESSOR, strings));
             String responsePre = new String(this.message.receiveData());
@@ -81,9 +72,6 @@ public class Messages {
             if (!responsePre.startsWith("OK")) {
                 return false;
             }
-            Colours.printGreen("Confirmation message to ");
-            System.out.print("IAMPREDECESSOR");
-            Colours.printGreen(" received successfully\n");
             return true;
         } catch (Exception e) {
             return false;
@@ -150,10 +138,10 @@ public class Messages {
         Colours.printGreen(" received successfully\n");
         return true;
     }
-    public Boolean SendStore(String senderId,String fileName,int rep,byte[] info,InetSocketAddress self )throws Exception
+    public Boolean SendStore(String senderId,String fileName,int rep,byte[] info)throws Exception
     {
         this.printScreenMessage("STORE");
-        String header = MessageHandler.subst(MessageHandler.STORE,senderId,fileName,Integer.toString(rep),self.getHostName(),Integer.toString(self.getPort()) );
+        String header = MessageHandler.subst(MessageHandler.STORE,senderId,fileName,Integer.toString(rep));
         byte[] toSend = new byte[header.length()+info.length];
         System.arraycopy(header.getBytes(), 0, toSend, 0, header.length());
         System.arraycopy(info, 0, toSend, header.length(), info.length);
@@ -187,9 +175,9 @@ public class Messages {
             return null;
 
         
-        int length = responseBytes.length - (header.length()+MessageHandler.CRLF.length());
-        byte[] info = new byte[responseBytes.length - (header.length()+MessageHandler.CRLF.length())];
-        System.arraycopy(responseBytes, header.length()+MessageHandler.CRLF.length(), info, 0,length);
+        int length = responseBytes.length - (splitedMessage[0].length()+MessageHandler.CRLF.length());
+        byte[] info = new byte[responseBytes.length - (splitedMessage[0].length()+MessageHandler.CRLF.length())];
+        System.arraycopy(responseBytes, splitedMessage[0].length()+MessageHandler.CRLF.length(), info, 0,length);
 
 
         Colours.printGreen("Confirmation message to ");
@@ -197,10 +185,10 @@ public class Messages {
         Colours.printGreen(" received successfully\n");
         return info;
     }
-    public byte[] SendGet(String senderId,String fileName,InetSocketAddress self)throws Exception
+    public byte[] SendGet(String senderId,String fileName)throws Exception
     {
         this.printScreenMessage("GET");
-        String header = MessageHandler.subst(MessageHandler.GET,senderId,fileName,self.getHostName(),Integer.toString(self.getPort()));
+        String header = MessageHandler.subst(MessageHandler.GET,senderId,fileName);
         this.message.sendData(header);
         
         byte[] responseBytes = this.message.receiveData();
@@ -214,9 +202,9 @@ public class Messages {
             return null;
 
         
-        int length = responseBytes.length - (header.length()+MessageHandler.CRLF.length());
-        byte[] info = new byte[responseBytes.length - (header.length()+MessageHandler.CRLF.length())];
-        System.arraycopy(responseBytes, header.length()+MessageHandler.CRLF.length(), info, 0,length);
+        int length = responseBytes.length - (splitedMessage[0].length()+MessageHandler.CRLF.length());
+        byte[] info = new byte[responseBytes.length - (splitedMessage[0].length()+MessageHandler.CRLF.length())];
+        System.arraycopy(responseBytes, splitedMessage[0].length()+MessageHandler.CRLF.length(), info, 0,length);
 
 
         Colours.printGreen("Confirmation message to ");
@@ -242,4 +230,59 @@ public class Messages {
             return false;
         }
     }
+    public Boolean SendRemove(String senderId,String fileName) {
+        this.printScreenMessage("REMOVE");
+        try {
+            this.message.sendData(MessageHandler.subst(MessageHandler.REMOVE, senderId,fileName));
+            String response = new String(this.message.receiveData());
+            this.message.close();
+            if (!response.startsWith("OK")) {
+                return false;
+            }
+            Colours.printGreen("Confirmation message to ");
+            System.out.print("DELETE" );
+            Colours.printGreen(" received successfully\n");
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public Boolean SendReclaim(long space) {
+        this.printScreenMessage("RECLAIM");
+        try {
+            this.message.sendData(MessageHandler.subst(MessageHandler.RECLAIM, Long.toString(space)));
+            String response = new String(this.message.receiveData());
+            this.message.close();
+            if (!response.startsWith("OK")) {
+                return false;
+            }
+            Colours.printGreen("Confirmation message to ");
+            System.out.print("RECLAIM" );
+            Colours.printGreen(" received successfully\n");
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    public Boolean SendStoreSpecial(long id,byte[] info)throws Exception
+    {
+        this.printScreenMessage("STORESPECIAL");
+        String header = MessageHandler.subst(MessageHandler.STORESPECIAL,Long.toString(id));
+        byte[] toSend = new byte[header.length()+info.length];
+        System.arraycopy(header.getBytes(), 0, toSend, 0, header.length());
+        System.arraycopy(info, 0, toSend, header.length(), info.length);
+        this.message.sendData(toSend);
+        byte[] responseBytes = this.message.receiveData();
+        String response = new String(responseBytes);
+        this.message.close();
+        if (!response.startsWith("OK")) {
+            return false;
+        }
+        Colours.printGreen("Confirmation message to ");
+        System.out.print("STORESPECIAL");
+        Colours.printGreen(" received successfully\n");
+        return true;
+    }
+    
 }
