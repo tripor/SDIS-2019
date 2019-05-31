@@ -215,4 +215,22 @@ public class Storage {
         }
         return true;
     }
+
+    @Override
+    public String toString()
+    {
+        String devolver = new String();
+        int size=this.files.size();
+        if(size==1)
+            devolver += "There is " + this.files.size() +" file in the system\n";
+        else
+            devolver += "There are " + this.files.size() +" files in the system\n";
+        for(int i=0;i<this.files.size();i++)
+        {
+            devolver += "File number " + (i+1) + " : " + this.files.get(i) + "\n";
+        }
+        devolver += "Total space occupied: " + this.currentSize + " from a max total of "+ this.maxSpace+"\n";
+        devolver += "Server is " + (this.currentSize * 100 /this.maxSpace) + "% occupied\n";
+        return devolver;
+    }
 }

@@ -158,7 +158,7 @@ public class MessageHandler implements Runnable {
                 else
                 {
                     InetSocketAddress succ = Server.singleton.getNode().findSuccessor(id);
-                    this.sendResponse(MessageHandler.subst(MessageHandler.SUCC, succ.getHostName(),Integer.toString(succ.getPort())));
+                    this.sendResponse(MessageHandler.subst(MessageHandler.SUCC, succ.getAddress().getHostAddress(),Integer.toString(succ.getPort())));
                 }
             }
             else if(splitedHeader[0].equals("IAMPRE"))
@@ -176,7 +176,7 @@ public class MessageHandler implements Runnable {
             {
                 InetSocketAddress pre= Server.singleton.getNode().getPreAddress();
                 if(pre!=null)
-                    this.sendResponse(MessageHandler.subst(MessageHandler.MYPRE,pre.getHostName(),Integer.toString(pre.getPort())));
+                    this.sendResponse(MessageHandler.subst(MessageHandler.MYPRE,pre.getAddress().getHostAddress(),Integer.toString(pre.getPort())));
                 else
                     this.sendResponse(MessageHandler.subst(MessageHandler.MYPRE,"null","0"));
             }
@@ -185,7 +185,10 @@ public class MessageHandler implements Runnable {
                 Colours.printGreen("\tMessage:-->");
                 System.out.print(header.trim());
                 Colours.printGreen("<--\n");
-                this.sendResponse(MessageHandler.subst(MessageHandler.TABLE, Server.singleton.getNode().getFingerTable().toString()));
+                String info = Server.singleton.getNode().toString()+"\n";
+                info+=Server.singleton.getNode().getFingerTable().toString() + "\n";
+                info+=Server.singleton.getStorage().toString() + "\n";
+                this.sendResponse(MessageHandler.subst(MessageHandler.TABLE,info));
             }
             else if(splitedHeader[0].equals("BACKUP"))
             {

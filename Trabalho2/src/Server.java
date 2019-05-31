@@ -26,7 +26,7 @@ public class Server {
             ip = args[2];
             port2 = Integer.parseInt(args[3]);
         } else {
-            System.err.println("\nArguments must be: <option> <server_port> <ip_adress of another server> <port of another server>\n");
+            Colours.printRed("\nArguments must be: <option> <server_port> <ip_adress of another server> <port of another server>\n");
             System.exit(1);
         }
         Server server = new Server(option, port, ip,port2);
@@ -46,6 +46,7 @@ public class Server {
     private int anotherPort;
     private Node node;
     private Storage storage;
+    private String ip;
 
 
     private TcpServer tcpServer;
@@ -68,10 +69,10 @@ public class Server {
         this.removeCycle = new ArrayList<Long>();
         this.storeSpecialCycle = new ArrayList<Long>();
         try {
-            this.tcpServer = new TcpServer(port);
+            this.tcpServer = new TcpServer(this.port);
             System.out.println("Port used:- " + this.tcpServer.getPort());
         } catch (IOException e) {
-            System.err.println("Couldn't make the server socket. Exiting...");
+            Colours.printRed("Couldn't make the server socket. Exiting...\n");
             System.exit(1);
         }
         try {
@@ -81,16 +82,23 @@ public class Server {
             URL whatismyip = new URL("http://checkip.amazonaws.com");
             BufferedReader in = new BufferedReader(new InputStreamReader(whatismyip.openStream()));
             String ip = in.readLine(); // you get the IP as a String
-
+            if(this.option==0)
+            {
+                this.ip=ip;
+            }
+            else
+            {
+                this.ip=inetAddress.getHostAddress();
+            }
             System.out.println("\tServer setup in:");
             System.out.println("\tLocal IP Address:- " + inetAddress.getHostAddress());
             System.out.println("\tExternal IP Address:- " + ip);
             System.out.println("\tHost Name:- " + inetAddress.getHostName());
         } catch (UnknownHostException e) {
-            System.err.println("Couldn't get INetAddress");
+            Colours.printRed("Couldn't get INetAddress\n");
             System.exit(1);
         } catch (Exception e) {
-            System.err.println("Error while trying to get the external ip address");
+            Colours.printRed("Error while trying to get the external ip address\n");
             System.exit(1);
         }
     }
@@ -98,7 +106,7 @@ public class Server {
     public void run() {
         System.out.println("Setting up server...");
         try {
-            this.node = new Node(new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), this.tcpServer.getPort()));
+            this.node = new Node(new InetSocketAddress(this.ip, this.tcpServer.getPort()));
             if(!this.isFirstServer())
             {
                 System.out.println("Trying to join chord ring");
@@ -106,12 +114,12 @@ public class Server {
                 System.out.println("Chord ring joined");
             }
         } catch (Exception e) {
-            Colours.printRed("A error has ocurred while trying to create this node");
+            Colours.printRed("A error has ocurred while trying to create this node\n");
             System.exit(1);
         }
 
         Runnable ringMaintain = new RingMaintenance(this.node);
-        Server.scheduledExecutor.scheduleAtFixedRate(ringMaintain, 0, 10, TimeUnit.SECONDS);
+        Server.scheduledExecutor.scheduleAtFixedRate(ringMaintain, 0, 4, TimeUnit.SECONDS);
         Runnable fingerTableMaintain = new FingerTableMaintenance(this.node);
         Server.scheduledExecutor.scheduleAtFixedRate(fingerTableMaintain, 0, 2, TimeUnit.SECONDS);
         this.storage=new Storage(this.node.getSelfAddressInteger());
@@ -136,7 +144,7 @@ public class Server {
         try {
             this.tcpServer.close();
         } catch (IOException e) {
-            System.err.println("Error while closing the Server Socket.");
+            Colours.printRed("Error while closing the Server Socket.\n");
             System.exit(1);
         }
         System.out.println("Server has been closed");
@@ -144,7 +152,7 @@ public class Server {
 
     public Boolean isFirstServer()
     {
-        if(this.option == 2)
+        if(this.anotherAddress.equals("0") && this.anotherPort==0)
             return true;
         else
             return false;

@@ -60,7 +60,7 @@ public class FingerTable {
                             this.fingerTable.put(1,succ);
                             Colours.printYellow("A new successor was set up. Details: \n");
                             Colours.printYellow("\tIp address:- ");
-                            System.out.println(succ.getHostName());
+                            System.out.println(succ.getAddress().getHostAddress());
                             Colours.printYellow("\tPort:- ");
                             System.out.println(succ.getPort());
                             return succ;
@@ -82,7 +82,7 @@ public class FingerTable {
                 succ=pre;
                 Colours.printYellow("A new successor was set up. Details: \n");
                 Colours.printYellow("\tIp address:- ");
-                System.out.println(succ.getHostName());
+                System.out.println(succ.getAddress().getHostAddress());
                 Colours.printYellow("\tPort:- ");
                 System.out.println(succ.getPort());
             }
@@ -195,11 +195,12 @@ public class FingerTable {
     public synchronized String toString()
     {
         String devolver = new String();
+        devolver+= "Finger table:\n";
         for(int i=1;i<=this.m;i++)
         {
             InetSocketAddress ad = this.fingerTable.get(i);
             if(ad!=null)
-                devolver+= "number: "+ i +" | ip: "+ ad.getHostName() + " | port: " + ad.getPort() + " | id: " + Hash.hashBytesInteger(ad.hashCode()+ad.getPort())+"\n";
+                devolver+= "number: "+ i +" | ip: "+ ad.getAddress().getHostAddress() + " | port: " + ad.getPort() + " | id: " + Hash.hashBytesInteger(ad.hashCode()+ad.getPort())+"\n";
         }
         return devolver;
     }
