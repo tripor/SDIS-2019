@@ -31,7 +31,7 @@ public class RingMaintenance implements Runnable {
                     Colours.printBlue("Notifying that I'm the predecessor of the successor\n");
                     InetSocketAddress self = this.belongs.getSelfAddress();
                     Messages preSucMessage = new Messages(succ);
-                    if (!preSucMessage.SendIamPredecessor(self.getHostName(), Integer.toString(self.getPort()))) {
+                    if (!preSucMessage.SendIamPredecessor(self.getAddress().getHostAddress(), Integer.toString(self.getPort()))) {
                         Colours.printRed(
                                 "A error has ocurred while trying to notify the successor that I'm his predecessor\n");
                     }
@@ -46,7 +46,7 @@ public class RingMaintenance implements Runnable {
                             try {
                                 InetSocketAddress self = this.belongs.getSelfAddress();
                                 Messages preSucMessage = new Messages(ip, port);
-                                if (!preSucMessage.SendIamPredecessor(self.getHostName(),Integer.toString(self.getPort()))) {
+                                if (!preSucMessage.SendIamPredecessor(self.getAddress().getHostAddress(),Integer.toString(self.getPort()))) {
                                     throw new Exception();
                                 }
                                 this.belongs.getFingerTable().clear();

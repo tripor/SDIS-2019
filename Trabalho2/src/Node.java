@@ -43,7 +43,7 @@ public class Node {
                 this.fingerTable.setPosition(1, anotherServer);
                 Colours.printYellow("A new successor was set up. Details: \n");
                 Colours.printYellow("\tIp address:- ");
-                System.out.println(anotherServer.getHostName());
+                System.out.println(anotherServer.getAddress().getHostAddress());
                 Colours.printYellow("\tPort:- ");
                 System.out.println(anotherServer.getPort());
             }
@@ -61,7 +61,7 @@ public class Node {
             this.predecessor=pre;
             Colours.printCyan("A new predecessor was set up. Details: \n");
             Colours.printCyan("\tIp: ");
-            System.out.println(pre.getHostName());
+            System.out.println(pre.getAddress().getHostAddress());
             Colours.printCyan("\tPort: ");
             System.out.println(pre.getPort());
         }
@@ -74,7 +74,7 @@ public class Node {
                 this.predecessor=pre;
                 Colours.printCyan("A new predecessor was set up. Details: \n");
                 Colours.printCyan("\tIp: ");
-                System.out.println(pre.getHostName());
+                System.out.println(pre.getAddress().getHostAddress());
                 Colours.printCyan("\tPort: ");
                 System.out.println(pre.getPort());
             }
@@ -197,6 +197,24 @@ public class Node {
         return this.finding.contains(id);
     }
 
+    @Override
+    public String toString()
+    {
+        String devolver = new String();
+        devolver += "Self information:\n";
+        devolver += "Server ip:" + this.self.getAddress().getHostAddress() + " on port: "+ this.self.getPort()+" with id: "+this.selfIdInteger +"\n";
+        InetSocketAddress succ = this.getSuccessor();
+        if(succ!=null)
+            devolver += "Successor ip:" + succ.getAddress().getHostAddress() + " on port: "+ succ.getPort()+" with id: "+Hash.hashBytesInteger(succ) +"\n";
+        else
+            devolver += "Successor is not set\n";
+        InetSocketAddress pred = this.predecessor;
+        if(pred!=null)
+            devolver += "Predecessor ip:" + succ.getAddress().getHostAddress() + " on port: "+ succ.getPort()+" with id: "+Hash.hashBytesInteger(this.predecessor) +"\n";
+        else
+            devolver += "Predecessor is not set\n";
 
+        return devolver;
+    }
 
 }

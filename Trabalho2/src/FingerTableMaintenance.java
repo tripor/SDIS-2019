@@ -33,7 +33,7 @@ public class FingerTableMaintenance implements Runnable {
         InetSocketAddress succ = this.belongs.findSuccessor(newValue);
         if(succ != null && !succ.equals(this.belongs.getSelfAddress()))//diferente de null e de mim
         {
-            Colours.printPurple("The new successor of index " + index + " on the finger table is ip: "+succ.getHostName() +" port: "+succ.getPort() +"\n");   
+            Colours.printPurple("The new successor of index " + index + " on the finger table is ip: "+succ.getAddress().getHostAddress() +" port: "+succ.getPort() +"\n");   
             this.fingerTable.replacePosition(index, succ);
         }
         else

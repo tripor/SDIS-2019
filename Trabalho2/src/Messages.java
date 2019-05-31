@@ -106,9 +106,6 @@ public class Messages {
         String[] splitedMessage = response.split(MessageHandler.CRLF);
         this.message.close();
         if (response.startsWith("TABLE")) {
-            Colours.printGreen("Response to GETTABLE received -->");
-            System.out.print(response.trim());
-            Colours.printGreen("<--\n");
             if(splitedMessage.length==1)
                 return new String();
             else
@@ -128,7 +125,6 @@ public class Messages {
         this.message.sendData(toSend);
         byte[] responseBytes = this.message.receiveData();
         String response = new String(responseBytes);
-        String[] splitedMessage = response.split(MessageHandler.CRLF);
         this.message.close();
         if (!response.startsWith("OK")) {
             return false;
@@ -148,7 +144,6 @@ public class Messages {
         this.message.sendData(toSend);
         byte[] responseBytes = this.message.receiveData();
         String response = new String(responseBytes);
-        String[] splitedMessage = response.split(MessageHandler.CRLF);
         this.message.close();
         if (!response.startsWith("OK")) {
             return false;
