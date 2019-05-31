@@ -1,17 +1,21 @@
 import java.net.*;
 import java.io.*;
  
-public class Tcp {
+public class Tcp implements Runnable {
 
-    private int port;
+    private Thread tcp_thread;
 
-    public Tcp(int portNumber) { this.port = portNumber; } 
+    public Tcp() {
+        this.tcp_thread = new Thread(this);
+        this.tcp_thread.start();
+     } 
     
+    @Override
     public void run()
     {
          
         try (
-            ServerSocket serverSocket = new ServerSocket(this.port);
+            ServerSocket serverSocket = new ServerSocket(Server.singleton.getPort());
             Socket clientSocket = serverSocket.accept(); 
 
             //recebe                  
@@ -20,20 +24,22 @@ public class Tcp {
 
             DataInputStream dIn = new DataInputStream(clientSocket.getInputStream());
         ) {
+            /*
             String inputLine = in.readLine();
             String[] message_splited = inputLine.split(" ");
-
+            System.out.println(inputLine);
+            
             int length = dIn.readInt();// read length of incoming message
             if(length>0) {
                 byte[] message = new byte[length];
                 dIn.readFully(message, 0, message.length); // read the message
                 //send
                 Server.singleton.MDRmessageReceived(message_splited,message);
-            }
+            }*/
 
         } catch (IOException e) {
             System.out.println("Exception caught when trying to listen on port "
-                + port + " or listening for a connection");
+                + Server.singleton.getPort() + " or listening for a connection");
             System.out.println(e.getMessage());
         }
     }
