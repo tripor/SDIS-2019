@@ -3,6 +3,8 @@ SDIS-2019
 To run Server: Open a terminal in the program directory and type this: make arguments="<option> <port> <succ_ip> <succ_port>"
 The java command in the bin folder will not work since the program is dependent of the files folder and the current path
 
+To be the first server in the ring <succ_ip> and <succ_port> must be 0
+
 where:
 
 <option>
